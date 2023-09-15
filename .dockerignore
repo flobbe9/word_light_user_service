@@ -1,0 +1,15 @@
+### Gradle ###
+.gradle/
+build/
+gradle/
+build
+gradlew
+gradlew.bat
+
+### VS Code ###
+.vscode/
+
+### Other ###
+.github
+.gitignore
+*.md
