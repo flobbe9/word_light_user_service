@@ -22,11 +22,4 @@ public abstract class AbstractEntity {
     private LocalDateTime created;
 
     private LocalDateTime updated;
-
-
-    public AbstractEntity() {
-        
-        this.created = LocalDateTime.now();
-        this.updated = LocalDateTime.now();
-    }
 }
