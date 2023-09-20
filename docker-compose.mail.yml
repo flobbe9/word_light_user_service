@@ -1,0 +1,9 @@
+version: "3.9"
+
+services:
+    mailserver:
+        image: maildev/maildev
+        container_name: vorspiel_mail_server_test
+        ports:
+            - 1080:1080
+            - 1025:1025

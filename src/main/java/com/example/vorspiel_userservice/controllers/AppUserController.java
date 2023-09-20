@@ -30,10 +30,11 @@ public class AppUserController {
     
 
     @PostMapping("/register")
-    public ApiExceptionFormat register(@RequestBody @Validated @NotNull(message = "'appUser' cannot be null") AppUser appUser) {
+    // TODO: reconsider body object, choose wrapper instead?
+    public ApiExceptionFormat register(@RequestBody @NotNull(message = "'appUser' cannot be null") AppUser appUser) {
 
         // save as disabled user
-        this.appUserService.register(null);
+        this.appUserService.register(new AppUser(appUser.getEmail(), appUser.getPassword(), appUser.getRole()));
 
         return ApiExceptionHandler.returnPrettySuccess(HttpStatus.CREATED);
     }

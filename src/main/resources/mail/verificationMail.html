@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>DocumentBuilder | Bestätigen Sie Ihre Email-Adresse</title>
+        <meta charset="utf-8">
+        <!-- TODO: add viewport meta -->
+        <!-- TODO: add flexible height -->
+        <style>
+            body {
+                color: black;
+                font-family: Arial, sans-serif;
+                height: 100vh;
+                margin: 0;
+                text-align: center;
+            }
+            
+            .navBar {
+                align-items: center;
+                background-color: bisque;
+                color: black;
+                display: flex;
+                padding: 10px 30px;
+                text-align: left;
+                text-decoration: none;
+            }
+
+            #navHeading {
+                font-size: 20px;
+                margin-left: 10px;
+            }
+
+            .confirmationForm {
+                margin-bottom: 150px;
+            }
+
+            #confirmButton {
+                background-color: black;
+                border: none;
+                border-radius: 5px;
+                color: white;
+                font-size: 20px;
+                padding: 15px 20px;
+                text-decoration: none;
+                transition: 0.2s;
+            }
+
+            #confirmButton:hover {
+                background-color: rgba(0, 0, 0, 0.623);
+            }
+
+            .footer {
+                align-items: center;
+                background-color: black;
+                bottom: 0;
+                color: white;
+                display: flex;
+                height: 60px;
+                justify-content: center;
+                margin-top: 20px;
+                position: absolute;
+                width: 100vi;
+            }
+        </style>
+    </head>
+    
+    <body>
+        <a class="navBar" href="%s">
+            <img id="favicon" src="cid:favicon" alt="favicon" height="60px" width="65px"/>
+            <span id="navHeading">DocumentBuilder</span>
+        </a>
+
+        <p>
+            Vielen Dank, dass Sie sich für DocumentBuilder entschieden haben!
+        </p><br>
+
+        <p>
+            Bitte bestätigen Sie Ihre Email-Adresse, indem Sie auf den folgenden Button klicken:
+        </p>
+        <form class="confirmationForm" action="%s" target="_blank">
+            <button id="confirmButton" type="submit">
+                Email-Adresse bestätigen
+            </button><br><br>
+            
+            <p>
+                Sie haben keinen Account für DocumentBuilder erstellt? Dann können Sie diese Email ohne Weiteres ignorieren.
+            </p>
+        </form>
+
+        <p>
+            Mit besten Grüßen,<br>
+            Ihr DocumentBuilder Team
+        </p>
+    
+        <div class="footer">
+            &copy;DocumentBuilder
+        </div>
+    </body>
+</html>

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
+import com.example.vorspiel_userservice.abstractClasses.AbstractService;
 import com.example.vorspiel_userservice.entites.ConfirmationToken;
 import com.example.vorspiel_userservice.exception.ApiException;
 import com.example.vorspiel_userservice.repositories.ConfirmationTokenRepository;
@@ -16,9 +17,12 @@ import jakarta.validation.constraints.NotBlank;
 
 @Service
 @Validated
-public class ConfirmationTokenService {
+public class ConfirmationTokenService extends AbstractService<ConfirmationToken, ConfirmationTokenRepository> {
 
     private static final int CREATE_UNIQUE_UUID_TRIES = 1000;
+    
+    public static final String VALIDATION_NOT_NULL = "'confirmationToken' cannot be null.";
+    public static final String VALIDATION_TOKEN_NOT_BLANK = "'token' cannot be blank or null.";
 
     @Autowired
     private ConfirmationTokenRepository repository;
@@ -28,11 +32,13 @@ public class ConfirmationTokenService {
 
         String token = createNonExistingToken();
 
-        return this.repository.save(new ConfirmationToken(token));
+        ConfirmationToken confirmationToken = new ConfirmationToken(token);
+
+        return save(confirmationToken);
     }
     
 
-    public void confirmToken(@NotBlank(message = ConfirmationToken.VALIDATION_TOKEN_NOT_BLANK) String token) {
+    public void confirmToken(@NotBlank(message = VALIDATION_TOKEN_NOT_BLANK) String token) {
 
         if (token == null)
             throw new ApiException("Failed to confirm token. 'token' cannot be null.");
@@ -49,7 +55,7 @@ public class ConfirmationTokenService {
         confirmationToken.setConfirmedAt(LocalDateTime.now());
 
         // save token
-        this.repository.save(confirmationToken);
+        save(confirmationToken);
     }
 
 

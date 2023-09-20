@@ -27,13 +27,11 @@ import lombok.Setter;
 @AllArgsConstructor
 public class AppUser extends AbstractEntity implements UserDetails {
 
-    public static final String VALIDATION_NOT_NULL = "'appUser' cannot be null.";
-    public static final String VALIDATION_EMAIL_NOT_BLANK = "'email' cannot be blank or null.";
-
     @Pattern(regexp ="^[\\w!#$%&’*+/=?`{|}~^-]+(?:\\.[\\w!#$%&’*+/=?`{|}~^-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,6}$", message = "'email' pattern invalid")
     @NotNull(message = "'email' cannot be null")
     private String email;
 
+    // TODO
     // min length
     // max length
     // pattern
@@ -60,6 +58,7 @@ public class AppUser extends AbstractEntity implements UserDetails {
      * @param role
      */
     public AppUser(String email, String password, AppUserRole role) {
+        
         this.email = email;
         this.password = password;
         this.role = role;

@@ -3,8 +3,9 @@ server:
     error: 
         include-message: always
 
-## mysql
+
 spring:
+    ## mysql
     datasource:
         url: jdbc:mysql://localhost:3306/vorspiel
         username: root
@@ -15,3 +16,15 @@ spring:
             ddl-auto: create-drop
         defer-datasource-initialization: true
         open-in-view: false
+        
+    ## mail (access inbox on localhost:1080)
+    mail:
+        host: localhost
+        port: 1025
+        sender: 
+            name: Florin Schikarski
+            email: florin.schikarski@outlook.de
+
+    config:
+        # include .env file
+        import: optional:file:.env[.properties]

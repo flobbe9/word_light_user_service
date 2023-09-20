@@ -15,9 +15,6 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class ConfirmationToken extends AbstractEntity {
-
-    public static final String VALIDATION_NOT_NULL = "'confirmationToken' cannot be null.";
-    public static final String VALIDATION_TOKEN_NOT_BLANK = "'token' cannot be blank or null.";
     
     private String token;
 
@@ -30,6 +27,7 @@ public class ConfirmationToken extends AbstractEntity {
      * Sets expiration time to 15 minutes.
      */
     public ConfirmationToken(String token) {
+
         this.token = token;
         this.expiresAt = LocalDateTime.now().plusMinutes(15);
     }
@@ -39,6 +37,7 @@ public class ConfirmationToken extends AbstractEntity {
      * @param expiresAt time of expiration.
      */
     public ConfirmationToken(String token, LocalDateTime expiresAt) {
+        
         this.token = token;
         this.expiresAt = expiresAt;
     }
