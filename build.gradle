@@ -31,9 +31,15 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 
+    // junit
+    testImplementation 'org.junit.platform:junit-platform-suite-engine:1.10.0'
+
+    // lombok
 	compileOnly 'org.projectlombok:lombok'
-	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'
+
+    // db
+	runtimeOnly 'com.mysql:mysql-connector-j'
 }
 
 tasks.named('test') {
