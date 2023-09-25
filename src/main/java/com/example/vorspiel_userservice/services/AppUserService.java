@@ -81,10 +81,14 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
      */
     public AppUser update(@NotNull(message = VALIDATION_NOT_NULL) @Validated AppUser appUser) {
 
+        if (!this.repository.existsByEmail(appUser.getEmail()))
+            throw new ApiException("Failed to update user. User does not exist.");
+            
         return save(appUser);
     }
 
 
+    @Override
     public UserDetails loadUserByUsername(String email) {
 
         if (email == null || email.isBlank())
@@ -141,7 +145,10 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
                                   "token=" + confirmationToken.getToken();
 
         // replace placeholders
-        return String.format(htmlText, this.frontendBaseUrl, confirmationLink);
+        String text = String.format(htmlText, this.frontendBaseUrl, confirmationLink);
+        text = Utils.replaceOddChars(text);
+
+        return text;
     }
 
 

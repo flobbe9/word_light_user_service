@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.Reader;
-
 import com.example.vorspiel_userservice.exception.ApiException;
 
 
@@ -62,5 +61,24 @@ public class Utils {
         } catch (Exception e) {
             throw new ApiException("Failed to write String to File.", e);
         }
+    }
+
+
+    /**
+     * Replace odd characters that java uses for special chars like 'ä, ö, ü, ß' etc. with original chars. <p>
+     * 
+     * Alters given String.
+     * 
+     * @param str to fix
+     * @return fixed string
+     */
+    public static String replaceOddChars(String str) {
+
+        str = str.replace("Ã¤", "ä");
+        str = str.replace("Ã¶", "ö");
+        str = str.replace("Ã¼", "ü");
+        str = str.replace("ÃŸ", "ß");
+
+        return str;
     }
 }

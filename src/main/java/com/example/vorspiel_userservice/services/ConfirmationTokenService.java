@@ -28,20 +28,30 @@ public class ConfirmationTokenService extends AbstractService<ConfirmationToken,
     private ConfirmationTokenRepository repository;
 
 
+    /**
+     * Generate non existing token and save to db with default expiration date.
+     * 
+     * @return save confirmation token
+     */
     public ConfirmationToken saveNew() {
 
         String token = createNonExistingToken();
 
-        ConfirmationToken confirmationToken = new ConfirmationToken(token);
-
-        return save(confirmationToken);
+        return save(new ConfirmationToken(token));
     }
     
 
+    /**
+     * Find confirmation token and set confirmedAt date. <p>
+     * 
+     * Throws {@link ApiException} if <p>
+     * - token does not exist <p>
+     * - token is confirmed already <p>
+     * - token is expired
+     * 
+     * @param token to confirm
+     */
     public void confirmToken(@NotBlank(message = VALIDATION_TOKEN_NOT_BLANK) String token) {
-
-        if (token == null)
-            throw new ApiException("Failed to confirm token. 'token' cannot be null.");
 
         ConfirmationToken confirmationToken = getByToken(token);
 
@@ -69,20 +79,25 @@ public class ConfirmationTokenService extends AbstractService<ConfirmationToken,
     }
 
 
+    /**
+     * Generate a random String with {@link UUID} {@code randomUUID()} and check that it's unique in db. If it's not unique try again
+     * until it is or the max number of tries is reached.
+     * 
+     * @return random String
+     */
     private String createNonExistingToken() {
 
         int count = 0;
 
-        while (true) {
-            if (count == CREATE_UNIQUE_UUID_TRIES)
-                throw new ApiException("Failed to create confirmation token that does not exist in db. Reached maximum tries.");
-                
+        while (count < CREATE_UNIQUE_UUID_TRIES) {
             String token = UUID.randomUUID().toString();
             if (!existsByToken(token))
                 return token;
             else 
                 count++;
         }
+
+        throw new ApiException("Failed to create unique confirmation token. Reached maximum tries.");
     }
 
 
