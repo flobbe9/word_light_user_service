@@ -1,8 +1,6 @@
 package com.example.vorspiel_userservice.abstractClasses;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -34,10 +32,8 @@ public abstract class AbstractService<E extends AbstractEntity, Repository exten
      */
     public E save(@NotNull(message = "'entity' cannot be null") @Validated E entity) {
 
-        Optional<E> oldAppUser = this.repository.findById(entity.getId());
-        
         // case: entity does not exist yet
-        if (oldAppUser.isEmpty())
+        if (entity.getCreated() == null)
             entity.setCreated(LocalDateTime.now());
 
         entity.setUpdated(LocalDateTime.now());
@@ -50,5 +46,11 @@ public abstract class AbstractService<E extends AbstractEntity, Repository exten
 
         return this.repository.findById(id)
                               .orElseThrow(() -> new ApiException("Failed to find entity with id: " + id + "."));
+    }
+
+
+    public void delete(@NotNull(message = "'entity' cannot be null") @Validated E entity) {
+
+        this.repository.delete(entity);
     }
 }

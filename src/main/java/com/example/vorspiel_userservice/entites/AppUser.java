@@ -27,17 +27,17 @@ import lombok.Setter;
 @AllArgsConstructor
 public class AppUser extends AbstractEntity implements UserDetails {
 
-    @Pattern(regexp ="^[\\w!#$%&’*+/=?`{|}~^-]+(?:\\.[\\w!#$%&’*+/=?`{|}~^-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,6}$", message = "'email' pattern invalid")
+    @Pattern(regexp = "^[\\w!#$%&’*+/=?`{|}~^-]+(?:\\.[\\w!#$%&’*+/=?`{|}~^-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,6}$", message = "'email' pattern invalid")
     @NotNull(message = "'email' cannot be null")
     private String email;
 
-    // TODO
-    // min length
-    // max length
-    // pattern
-    // not null
+    // TODO: does not work yet
+    /** Minimum eight characters, maximum 30 characters, at least one uppercase letter, one lowercase letter, one number and one special character*/
+    // @Pattern(regexp = "^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,30}$", message = "'password' pattern invalid")
+    @NotNull(message = "'password' cannot be null")
     private String password;
 
+    @NotNull(message = "'role' cannot be null")
     @Enumerated(EnumType.STRING)
     private AppUserRole role;
 
