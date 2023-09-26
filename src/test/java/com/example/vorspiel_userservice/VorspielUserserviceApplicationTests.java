@@ -2,18 +2,18 @@ package com.example.vorspiel_userservice;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.TestClassOrder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.ClassOrderer.OrderAnnotation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Example;
 import org.springframework.mail.MailException;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.example.vorspiel_userservice.entities.AppUser;
@@ -39,33 +40,31 @@ import jakarta.validation.ConstraintViolationException;
 
 
 /**
- * Test class executing all test classes (sequentially if needed). <p>
+ * Test class executing all test classes sequentially that access the db. Starts one big integration test. <p>
  * 
- * Any new Test class has to be added here in order for the pipeline to recognize it.
- *
  * @since 0.0.1
  */
+@SpringBootTest
 @TestClassOrder(OrderAnnotation.class)
 class VorspielUserserviceApplicationTests {
 
-    @SpringBootTest
-    @AutoConfigureMockMvc
+    @Autowired
+    private AppUserService appUserService;
+
+    @Autowired
+    private AppUserRepository appUserRepository;
+    
+    @Autowired
+    private ConfirmationTokenService confirmationTokenService;
+
+    @Autowired
+    private ConfirmationTokenRepository confirmationTokenRepository;
+
+
     @TestInstance(Lifecycle.PER_CLASS)
     @Nested
     @Order(1)
     public class AppUserServiceTest {
-
-        @Autowired
-        private AppUserService appUserService;
-
-        @Autowired
-        private AppUserRepository appUserRepository;
-        
-        @Autowired
-        private ConfirmationTokenService confirmationTokenService;
-
-        @Autowired
-        private ConfirmationTokenRepository confirmationTokenRepository;
 
         /** Stays in db, should not be deleted by any test */
         private AppUser appUser;
@@ -83,18 +82,16 @@ class VorspielUserserviceApplicationTests {
         @BeforeEach
         void setup() {
 
-            this.appUser = new AppUser(this.email, 
-                                    this.password, 
-                                    this.role);
-            this.appUser.setId(1l);
+            this.appUser = new AppUser(this.email, this.password, this.role);
+            this.appUser.setId(getExistingAppUserId(this.email));
+            this.appUser = appUserService.save(this.appUser);
 
             this.secondAppUser = new AppUser("nonexisting@domain.com", this.password, AppUserRole.USER);
 
             this.confirmationToken = new ConfirmationToken(this.token);
-            this.confirmationToken.setId(1l);
+            this.confirmationToken.setId(getExistingConfirmationTokenId(this.token));
+            this.confirmationToken = confirmationTokenService.save(this.confirmationToken);
 
-            this.appUserService.save(this.appUser);
-            this.confirmationTokenService.save(this.confirmationToken);
         }
 
         
@@ -106,7 +103,7 @@ class VorspielUserserviceApplicationTests {
 
             // reset confirmation token
             this.confirmationToken.setConfirmedAt(null);
-            this.confirmationTokenService.save(this.confirmationToken);
+            confirmationTokenService.save(this.confirmationToken);
         }
 
 
@@ -115,7 +112,7 @@ class VorspielUserserviceApplicationTests {
             
             assertFalse(this.appUser.isEnabled());
 
-            this.appUserService.confirmAccount(this.email, this.token);
+            appUserService.confirmAccount(this.email, this.token);
             this.appUser = (AppUser) appUserService.loadUserByUsername(this.email);
 
             assertTrue(this.appUser.isEnabled());
@@ -125,55 +122,54 @@ class VorspielUserserviceApplicationTests {
         @Test 
         void confirmAccount_shouldValidate() {
 
-            assertDoesNotThrow(() -> this.appUserService.confirmAccount(this.email, this.token));
+            assertDoesNotThrow(() -> appUserService.confirmAccount(this.email, this.token));
 
             // null
-            assertThrows(ConstraintViolationException.class, () -> this.appUserService.confirmAccount(this.email, null));
-            assertThrows(ConstraintViolationException.class, () -> this.appUserService.confirmAccount(null, this.token));
+            assertThrows(ConstraintViolationException.class, () -> appUserService.confirmAccount(this.email, null));
+            assertThrows(ConstraintViolationException.class, () -> appUserService.confirmAccount(null, this.token));
 
             // blank
-            assertThrows(ConstraintViolationException.class, () -> this.appUserService.confirmAccount(this.email, " "));
-            assertThrows(ConstraintViolationException.class, () -> this.appUserService.confirmAccount(" ", this.token));
+            assertThrows(ConstraintViolationException.class, () -> appUserService.confirmAccount(this.email, " "));
+            assertThrows(ConstraintViolationException.class, () -> appUserService.confirmAccount(" ", this.token));
         }
 
 
         @Test
         void loadUserByUsername_shouldFindByEmail() {
 
-            assertThrows(ApiException.class, () -> this.appUserService.loadUserByUsername("nonexisting@domain.com"));
+            assertThrows(ApiException.class, () -> appUserService.loadUserByUsername("nonexisting@domain.com"));
 
-            assertDoesNotThrow(() -> this.appUserService.loadUserByUsername(this.email));
+            assertDoesNotThrow(() -> appUserService.loadUserByUsername(this.email));
         }
 
 
         @Test
         void loadUserByUsername_shouldValidate() {
 
-            assertDoesNotThrow(() -> this.appUserService.loadUserByUsername(this.email));
+            assertDoesNotThrow(() -> appUserService.loadUserByUsername(this.email));
 
-            assertThrows(ApiException.class, () -> this.appUserService.loadUserByUsername(null));
-            assertThrows(ApiException.class, () -> this.appUserService.loadUserByUsername(" "));
+            assertThrows(ApiException.class, () -> appUserService.loadUserByUsername(null));
+            assertThrows(ApiException.class, () -> appUserService.loadUserByUsername(" "));
         }
 
 
         @Test
         void register_shouldThrowOnDuplicateEmail() {
 
-            assertThrows(ApiException.class, () -> this.appUserService.register(this.appUser));
+            assertThrows(ApiException.class, () -> appUserService.register(this.appUser));
 
             assertDoesNotThrow(() -> 
-                expectMailingException(() -> this.appUserService.register(this.secondAppUser)));
+                expectMailingException(() -> appUserService.register(this.secondAppUser)));
         }
 
 
         @Test
         void register_shouldSave() {
+            assertFalse(appUserRepository.existsByEmail(this.secondAppUser.getEmail()));
 
-            assertFalse(this.appUserRepository.existsByEmail(this.secondAppUser.getEmail()));
+            expectMailingException(() -> appUserService.register(this.secondAppUser));
 
-            expectMailingException(() -> this.appUserService.register(this.secondAppUser));
-
-            assertTrue(this.appUserRepository.existsByEmail(this.secondAppUser.getEmail()));
+            assertTrue(appUserRepository.existsByEmail(this.secondAppUser.getEmail()));
         }
 
 
@@ -182,7 +178,7 @@ class VorspielUserserviceApplicationTests {
             
             assertEquals(this.password, this.secondAppUser.getPassword());
 
-            expectMailingException(() -> this.appUserService.register(this.secondAppUser));
+            expectMailingException(() -> appUserService.register(this.secondAppUser));
             
             assertNotEquals(this.password, this.secondAppUser.getPassword());
         }
@@ -191,36 +187,36 @@ class VorspielUserserviceApplicationTests {
         @Test
         void register_shouldValidate() {
 
-            assertThrows(ConstraintViolationException.class, () -> this.appUserService.register(null));
+            assertThrows(ConstraintViolationException.class, () -> appUserService.register(null));
 
             assertDoesNotThrow(() -> 
-                expectMailingException(() -> this.appUserService.register(this.secondAppUser)));
+                expectMailingException(() -> appUserService.register(this.secondAppUser)));
         }
 
 
         @Test
         void update_shouldThrowOnNonExistingAppUser() {
 
-            assertDoesNotThrow(() -> this.appUserService.update(this.appUser));
+            assertDoesNotThrow(() -> appUserService.update(this.appUser));
 
-            assertThrows(ApiException.class, () -> this.appUserService.update(this.secondAppUser));
+            assertThrows(ApiException.class, () -> appUserService.update(this.secondAppUser));
         }
 
 
         @Test
         void update_shouldValidate() {
 
-            assertDoesNotThrow(() -> this.appUserService.update(this.appUser));
+            assertDoesNotThrow(() -> appUserService.update(this.appUser));
 
-            assertThrows(ConstraintViolationException.class, () -> this.appUserService.update(null));
+            assertThrows(ConstraintViolationException.class, () -> appUserService.update(null));
         }
 
 
         @AfterAll
         void cleanAllUp() {
 
-            this.appUserRepository.deleteAll();
-            this.confirmationTokenRepository.deleteAll();
+            appUserRepository.deleteAll();
+            confirmationTokenRepository.deleteAll();
         }
 
 
@@ -239,128 +235,104 @@ class VorspielUserserviceApplicationTests {
                 assertTrue(e.getOriginalException() instanceof MailException);
             }
         }
-
-
-        /**
-         * Delete given user and assert that deletion was successful.
-         * 
-         * @param appUser to remove
-         */
-        private void removeAppUser(AppUser appUser) {
-
-            this.appUserRepository.delete(appUser);
-            assertFalse(this.appUserRepository.existsByEmail(appUser.getEmail()), 
-                                                            "Failed to clean up after test.");
-        }
     }
 
-
-    @SpringBootTest
-    @AutoConfigureMockMvc
+    
     @TestInstance(Lifecycle.PER_CLASS)
     @Nested
     @Order(2)
+    @TestMethodOrder(org.junit.jupiter.api.MethodOrderer.OrderAnnotation.class)
     public class ConfirmationTokenServiceTest {
 
-        @Autowired
-        private ConfirmationTokenService confirmationTokenService;
-
-        @Autowired
-        private ConfirmationTokenRepository confirmationTokenRepository;
-
         private ConfirmationToken confirmationToken;
+        private long id;
         private String token = UUID.randomUUID().toString();
 
-
+        
         @BeforeEach
         void setUp() {
-
+            
             this.confirmationToken = new ConfirmationToken(this.token);
-            this.confirmationToken.setId(1l);
+            this.confirmationToken.setId(getExistingConfirmationTokenId(this.token));
+            this.confirmationToken = confirmationTokenService.save(this.confirmationToken);
 
-            this.confirmationTokenService.save(this.confirmationToken);
-            assertTrue(this.confirmationTokenRepository.existsByToken(this.token));
+            this.id = this.confirmationToken.getId();    
         }
         
 
         @Test
         void saveNew_shouldSave() {
 
-            int numConfirmationTokens = this.confirmationTokenRepository.findAll().size();
+            int numConfirmationTokens = confirmationTokenRepository.findAll().size();
 
-            ConfirmationToken confirmationToken = this.confirmationTokenService.saveNew();
+            ConfirmationToken confirmationToken = confirmationTokenService.saveNew();
 
-            assertTrue(this.confirmationTokenRepository.existsByToken(confirmationToken.getToken()));
+            assertTrue(confirmationTokenRepository.existsByToken(confirmationToken.getToken()));
 
-            assertEquals(numConfirmationTokens + 1, this.confirmationTokenRepository.findAll().size());
+            assertEquals(numConfirmationTokens + 1, confirmationTokenRepository.findAll().size());
         }
 
 
         @Test
+        @Order(1)
         void confirmToken_shouldValidate() {
 
-            assertDoesNotThrow(() -> this.confirmationTokenService.confirmToken(this.token));
+            assertDoesNotThrow(() -> confirmationTokenService.confirmToken(this.token));
 
-            assertThrows(ConstraintViolationException.class, () -> this.confirmationTokenService.confirmToken(null));
-            assertThrows(ConstraintViolationException.class, () -> this.confirmationTokenService.confirmToken(" "));
+            assertThrows(ConstraintViolationException.class, () -> confirmationTokenService.confirmToken(null));
+            assertThrows(ConstraintViolationException.class, () -> confirmationTokenService.confirmToken(" "));
         }
 
 
         @Test
+        @Order(2)
         void confirmToken_shouldThrowIfNotExists() {
 
-            assertDoesNotThrow(() -> this.confirmationTokenService.confirmToken(this.token));
+            assertDoesNotThrow(() -> confirmationTokenService.confirmToken(this.token));
 
-            assertThrows(ApiException.class, () -> this.confirmationTokenService.confirmToken("nonExistintToken"));
+            assertThrows(ApiException.class, () -> confirmationTokenService.confirmToken("nonExistintToken"));
         }
 
 
         @Test
+        @Order(3)
         void confirmToken_shouldThrowIfConfirmedAlready() {
 
-            assertDoesNotThrow(() -> this.confirmationTokenService.confirmToken(this.token));
+            assertDoesNotThrow(() -> confirmationTokenService.confirmToken(this.token));
 
-            assertTrue(this.confirmationTokenService.getById(1l).getConfirmedAt() != null);
+            assertTrue(confirmationTokenService.getById(this.id).getConfirmedAt() != null);
 
-            assertThrows(ApiException.class, () -> this.confirmationTokenService.confirmToken(this.token));
+            assertThrows(ApiException.class, () -> confirmationTokenService.confirmToken(this.token));
         }
 
 
         @Test
+        @Order(4)
         void confirmToken_shouldThrowIfExpired() {
 
-            assertDoesNotThrow(() -> this.confirmationTokenService.confirmToken(this.token));
+            assertDoesNotThrow(() -> confirmationTokenService.confirmToken(this.token));
 
             this.confirmationToken.setConfirmedAt(null);
             this.confirmationToken.setExpiresAt(LocalDateTime.now());
-            this.confirmationTokenService.save(confirmationToken);
+            confirmationTokenService.save(confirmationToken);
 
-            assertThrows(ApiException.class, () -> this.confirmationTokenService.confirmToken(this.token));
+            assertThrows(ApiException.class, () -> confirmationTokenService.confirmToken(this.token));
         }
 
 
         @AfterAll
         void cleanAllUp() {
 
-            this.confirmationTokenRepository.deleteAll();
+            confirmationTokenRepository.deleteAll();
         }
     }
 
 
-    @SpringBootTest
-    @AutoConfigureMockMvc
     @TestInstance(Lifecycle.PER_CLASS)
     @Nested
     @Order(3)
-    // TODO: does not work, some order incorrect
+    @TestMethodOrder(org.junit.jupiter.api.MethodOrderer.OrderAnnotation.class)
     public class AbstractServiceTest {
-        
-        @Autowired
-        private AppUserService appUserService;
-
-        @Autowired
-        private AppUserRepository appUserRepository;
-
 
         /** Stays in db, should not be deleted by any test */
         private AppUser appUser;
@@ -374,21 +346,19 @@ class VorspielUserserviceApplicationTests {
         @BeforeEach
         void setup() {  
 
-            this.appUser = new AppUser(this.email, 
-                                    this.password, 
-                                    this.role);
-            this.appUser.setId(1l);
+            this.appUser = new AppUser(this.email, this.password, this.role);
+            this.appUser.setId(getExistingAppUserId(this.email));
+            this.appUser = appUserService.save(this.appUser);
 
-            this.secondAppUser = new AppUser("nonexisting@domain.com", this.password, AppUserRole.USER);
-            this.secondAppUser.setId(2l);
-
-            this.appUser = this.appUserService.save(this.appUser);
+            String secondAppUserEmail = "nonexisting@domain.com";
+            this.secondAppUser = new AppUser(secondAppUserEmail, this.password, AppUserRole.USER);
+            this.secondAppUser.setId(getExistingAppUserId(secondAppUserEmail));
         }
 
         
         @AfterEach
         void cleanUp() {
-            
+
             removeAppUser(this.secondAppUser);
         }
 
@@ -396,9 +366,9 @@ class VorspielUserserviceApplicationTests {
         @Test
         void save_shouldValidate() {
 
-            assertDoesNotThrow(() -> this.appUserService.save(this.appUser));
+            assertDoesNotThrow(() -> appUserService.save(this.appUser));
 
-            assertThrows(ConstraintViolationException.class, () -> this.appUserService.save(null));
+            assertThrows(ConstraintViolationException.class, () -> appUserService.save(null));
         }
 
 
@@ -406,11 +376,11 @@ class VorspielUserserviceApplicationTests {
         @Order(0)
         void save_shouldCreateIfNotExists() {
 
-            assertFalse(this.appUserRepository.existsByEmail(this.secondAppUser.getEmail()));
+            assertFalse(appUserRepository.existsByEmail(this.secondAppUser.getEmail()));
 
-            this.appUserService.save(this.secondAppUser);
+            this.secondAppUser = appUserService.save(this.secondAppUser);
 
-            assertTrue(this.appUserRepository.existsByEmail(this.secondAppUser.getEmail()));
+            assertTrue(appUserRepository.existsByEmail(this.secondAppUser.getEmail()));
 
             assertNotNull(this.secondAppUser.getCreated());
             assertNotNull(this.secondAppUser.getUpdated());
@@ -433,9 +403,9 @@ class VorspielUserserviceApplicationTests {
             this.appUser.setEmail(newEmail);
 
             // update
-            this.appUserService.save(this.appUser);
+            appUserService.save(this.appUser);
             
-            AppUser updatedAppUser = this.appUserRepository.findByEmail(newEmail)
+            AppUser updatedAppUser = appUserRepository.findByEmail(newEmail)
                                                         .orElseThrow(() -> new ApiException("Failed to update appUser. Test failed."));
 
             // created should be the same
@@ -456,49 +426,80 @@ class VorspielUserserviceApplicationTests {
         @Test
         void getById_shouldValidate() {
 
-            assertDoesNotThrow(() -> this.appUserService.getById(this.appUser.getId()));
+            assertDoesNotThrow(() -> appUserService.getById(this.appUser.getId()));
 
-            assertThrows(ConstraintViolationException.class, () -> this.appUserService.getById(null));
+            assertThrows(ConstraintViolationException.class, () -> appUserService.getById(null));
         }
 
 
         @Test
         void getById_shouldThrowIfNotFound() {
 
-            assertDoesNotThrow(() -> this.appUserService.getById(this.appUser.getId()));
+            assertDoesNotThrow(() -> appUserService.getById(this.appUser.getId()));
 
-            assertThrows(ApiException.class, () -> this.appUserService.getById(this.secondAppUser.getId()));
+            assertThrows(ApiException.class, () -> appUserService.getById(this.secondAppUser.getId()));
         }
 
 
         @Test
         void delete_shouldNotExistAfterwards() {
 
-            assertTrue(this.appUserRepository.existsByEmail(this.email));
+            assertTrue(appUserRepository.existsByEmail(this.email));
 
-            this.appUserService.delete(this.appUser);
+            appUserService.delete(this.appUser);
 
-            assertFalse(this.appUserRepository.existsByEmail(this.email));
-        }
-
-
-        /**
-         * Delete given user and assert that deletion was successful.
-         * 
-         * @param appUser to remove
-         */
-        private void removeAppUser(AppUser appUser) {
-
-            this.appUserRepository.delete(appUser);
-            assertFalse(this.appUserRepository.existsByEmail(appUser.getEmail()), 
-                                                            "Failed to clean up after test.");
+            assertFalse(appUserRepository.existsByEmail(this.email));
         }
 
 
         @AfterAll
         void cleanAllUp() {
 
-            this.appUserRepository.deleteAll();
+            appUserRepository.deleteAll();
         }
+    }
+
+
+    /**
+     * Delete given user and assert that deletion was successful.
+     * 
+     * @param appUser to remove
+     */
+    private void removeAppUser(AppUser appUser) {
+
+        this.appUserRepository.delete(appUser);
+        assertFalse(this.appUserRepository.existsByEmail(appUser.getEmail()), "Failed to clean up after test.");
+    }
+
+
+    /**
+     * Find {@link ConfirmationToken} id by given {@code token} or return 1 if does not exist.
+     * 
+     * @param token of the ConfirmationToken
+     * @return id of the ConfirmationToken or 1 if not exists
+     */
+    private Long getExistingConfirmationTokenId(String token) {
+
+        Optional<ConfirmationToken> confirmationTokens = this.confirmationTokenRepository.findByToken(token);
+        if (confirmationTokens.isPresent())
+            return confirmationTokens.get().getId();
+
+        return 1l;
+    }
+
+
+    /**
+     * Find {@link AppUser} id by given {@code email} or return 1 if does not exist.
+     * 
+     * @param email of the AppUser
+     * @return id of the AppUser or 1 if not exists
+     */
+    private Long getExistingAppUserId(String email) {
+
+        Optional<AppUser> appUsers = this.appUserRepository.findByEmail(email);
+        if (appUsers.isPresent())
+            return appUsers.get().getId();
+
+        return 1l;
     }
 }

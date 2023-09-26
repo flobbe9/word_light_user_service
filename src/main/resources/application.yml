@@ -5,17 +5,24 @@ server:
 
 
 spring:
-    ## mysql
+    ## db
     datasource:
         url: jdbc:mysql://localhost:3306/vorspiel
+        # url: jdbc:h2:mem:vorspiel.db
         username: root
         password:
     jpa:
         database-platform: org.hibernate.dialect.MySQL8Dialect
+        # jpa.database-platform: org.hibernate.dialect.H2Dialect
         hibernate:
             ddl-auto: create-drop
         defer-datasource-initialization: true
         open-in-view: false
+    # h2: 
+    #     console: 
+    #         enabled: true
+    #         path: /h2
+
         
     ## mail (access inbox on localhost:1080)
     mail:
@@ -26,5 +33,4 @@ spring:
             email: florin.schikarski@outlook.de
 
     config:
-        # include .env file
-        import: optional:file:.env[.properties]
+        import: optional:file:.env[.properties] # include .env file

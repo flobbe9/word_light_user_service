@@ -20,7 +20,4 @@ jobs:
           java-version: '17'
       - name: Start db and mail server
         run: docker-compose -f 'docker-compose.dev.yml' up -d
-      - name: build
-        run: gradle clean build -x test
-      - name: test
-        run: gradle test --tests VorspielUserserviceApplicationTests
+      - run: gradle clean build
