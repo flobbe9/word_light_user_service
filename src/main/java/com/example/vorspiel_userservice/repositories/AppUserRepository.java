@@ -3,7 +3,7 @@ package com.example.vorspiel_userservice.repositories;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
-import com.example.vorspiel_userservice.entites.AppUser;
+import com.example.vorspiel_userservice.entities.AppUser;
 
 
 @Repository

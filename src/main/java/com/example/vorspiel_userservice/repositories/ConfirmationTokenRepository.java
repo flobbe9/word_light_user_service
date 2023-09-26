@@ -4,7 +4,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Repository;
 
-import com.example.vorspiel_userservice.entites.ConfirmationToken;
+import com.example.vorspiel_userservice.entities.ConfirmationToken;
 
 
 @Repository

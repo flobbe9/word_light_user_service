@@ -1,4 +1,4 @@
-package com.example.vorspiel_userservice.entites;
+package com.example.vorspiel_userservice.entities;
 
 import java.time.LocalDateTime;
 

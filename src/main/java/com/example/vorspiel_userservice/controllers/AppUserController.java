@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.vorspiel_userservice.entites.AppUser;
+import com.example.vorspiel_userservice.entities.AppUser;
 import com.example.vorspiel_userservice.exception.ApiExceptionFormat;
 import com.example.vorspiel_userservice.exception.ApiExceptionHandler;
 import com.example.vorspiel_userservice.services.AppUserService;

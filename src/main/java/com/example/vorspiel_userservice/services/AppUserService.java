@@ -12,8 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import com.example.vorspiel_userservice.abstractClasses.AbstractService;
-import com.example.vorspiel_userservice.entites.AppUser;
-import com.example.vorspiel_userservice.entites.ConfirmationToken;
+import com.example.vorspiel_userservice.entities.AppUser;
+import com.example.vorspiel_userservice.entities.ConfirmationToken;
 import com.example.vorspiel_userservice.exception.ApiException;
 import com.example.vorspiel_userservice.repositories.AppUserRepository;
 import com.example.vorspiel_userservice.utils.Utils;

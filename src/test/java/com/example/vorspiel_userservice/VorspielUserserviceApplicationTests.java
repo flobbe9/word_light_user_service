@@ -27,8 +27,8 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
-import com.example.vorspiel_userservice.entites.AppUser;
-import com.example.vorspiel_userservice.entites.ConfirmationToken;
+import com.example.vorspiel_userservice.entities.AppUser;
+import com.example.vorspiel_userservice.entities.ConfirmationToken;
 import com.example.vorspiel_userservice.enums.AppUserRole;
 import com.example.vorspiel_userservice.exception.ApiException;
 import com.example.vorspiel_userservice.repositories.AppUserRepository;
