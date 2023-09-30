@@ -13,24 +13,22 @@ spring:
         password:
     jpa:
         database-platform: org.hibernate.dialect.MySQL8Dialect
-        # jpa.database-platform: org.hibernate.dialect.H2Dialect
+        # database-platform: org.hibernate.dialect.H2Dialect
         hibernate:
             ddl-auto: create-drop
         defer-datasource-initialization: true
         open-in-view: false
-    # h2: 
-    #     console: 
-    #         enabled: true
-    #         path: /h2
+        # console: 
+        #     enabled: true
+        #     path: /h2
 
-        
-    ## mail (access inbox on localhost:1080)
+    ## mail (maildev access inbox on localhost:1080)
     mail:
         host: localhost
         port: 1025
         sender: 
-            name: Florin Schikarski
-            email: florin.schikarski@outlook.de
+            name: DocumentBuilder Team
+            email: documentBuilder.mailing@outlook.de
 
     config:
         import: optional:file:.env[.properties] # include .env file
