@@ -2,22 +2,22 @@ package com.example.vorspiel_userservice.abstractClasses;
 
 import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.validation.annotation.Validated;
 
 import com.example.vorspiel_userservice.exception.ApiException;
 import com.example.vorspiel_userservice.repositories.Dao;
 
-import jakarta.validation.constraints.NotNull;
-
 
 /**
- * Abstract class defining minimum fields all entites must have.
+ * Abstract class defining minimum fields all entites must have. <p>
+ * 
+ * Note that an entity annotated with {@code @Valid} will again be validated when calling {@code repository.save(E)}, 
+ * even though the {@code @Valid} annotation is missing here.
  * 
  * @since 0.0.1
  */
 @Service
-@Validated
 public abstract class AbstractService<E extends AbstractEntity, Repository extends Dao<E>> {
     
     @Autowired
@@ -30,7 +30,10 @@ public abstract class AbstractService<E extends AbstractEntity, Repository exten
      * @param entity to save
      * @return saved abstract entity
      */
-    public E save(@NotNull(message = "'entity' cannot be null") @Validated E entity) {
+    public E save(E entity) {
+
+        if (entity == null)
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Failed to save entity. 'entity' cannot be null.");
 
         // case: entity does not exist yet
         if (entity.getCreated() == null)
@@ -42,14 +45,20 @@ public abstract class AbstractService<E extends AbstractEntity, Repository exten
     }
 
 
-    public E getById(@NotNull(message = "Failed to find entity. 'id' cannot be null.") Long id) {
+    public E getById(Long id) {
+
+        if (id == null)
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Failed find entity by id. 'id' cannot be null.");
 
         return this.repository.findById(id)
                               .orElseThrow(() -> new ApiException("Failed to find entity with id: " + id + "."));
     }
 
 
-    public void delete(@NotNull(message = "'entity' cannot be null") @Validated E entity) {
+    public void delete(E entity) {
+
+        if (entity == null)
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Failed to save entity. 'entity' cannot be null.");
 
         this.repository.delete(entity);
     }

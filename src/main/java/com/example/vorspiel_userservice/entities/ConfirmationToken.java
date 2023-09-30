@@ -5,6 +5,9 @@ import java.time.LocalDateTime;
 import com.example.vorspiel_userservice.abstractClasses.AbstractEntity;
 
 import jakarta.persistence.Entity;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -14,12 +17,16 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class ConfirmationToken extends AbstractEntity {
     
+    @NotBlank(message = "'token' cannot be blank or null")
+    @EqualsAndHashCode.Include
     private String token;
 
     private LocalDateTime confirmedAt;
 
+    @NotNull(message = "'expiresAt' cannot be null")
     private LocalDateTime expiresAt;
 
 

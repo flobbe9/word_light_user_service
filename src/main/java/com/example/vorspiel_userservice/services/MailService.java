@@ -10,7 +10,6 @@ import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-import org.springframework.validation.annotation.Validated;
 
 import com.example.vorspiel_userservice.exception.ApiException;
 import jakarta.mail.MessagingException;
@@ -19,7 +18,6 @@ import jakarta.validation.constraints.NotBlank;
 
 
 @Service
-@Validated
 public class MailService {
 
     @Autowired

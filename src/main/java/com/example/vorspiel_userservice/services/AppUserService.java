@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,10 +20,17 @@ import com.example.vorspiel_userservice.repositories.AppUserRepository;
 import com.example.vorspiel_userservice.utils.Utils;
 
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 
+/**
+ * Class handling most logic for {@link AppUser} entity.
+ * 
+ * @since 0.0.1
+ * @see AppUserRepository
+ */
 @Service
 @Validated
 public class AppUserService extends AbstractService<AppUser, AppUserRepository> implements UserDetailsService {
@@ -62,7 +70,9 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
      * @param appUser to register
      * @return registered appUser
      */
-    public AppUser register(@NotNull(message = VALIDATION_NOT_NULL) @Validated AppUser appUser) {
+    public AppUser register(@NotNull(message = VALIDATION_NOT_NULL) @Valid AppUser appUser) {
+
+        validatePassword(appUser.getPassword());
 
         saveNew(appUser);
 
@@ -73,17 +83,24 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
     
     
     /**
-     * Call {@code save} method of jpa repo on existing {@code AppUser} or throw if does not exist.
+     * Call {@code save} method of jpa repo on existing {@link AppUser} or throw if does not exist.
      * 
      * @param appUser to update
+     * @param newPassword true if password has been changed
      * @return updated appUser
      * @throws ApiException if user does not exist
      */
-    public AppUser update(@NotNull(message = VALIDATION_NOT_NULL) @Validated AppUser appUser) {
+    public AppUser update(@NotNull(message = VALIDATION_NOT_NULL) @Valid AppUser appUser) {
 
-        if (!this.repository.existsByEmail(appUser.getEmail()))
-            throw new ApiException("Failed to update user. User does not exist.");
-            
+        AppUser oldAppUser = getById(appUser.getId());
+
+        // case: changed password
+        if (!oldAppUser.getPassword().equals(appUser.getPassword())) {
+            String password = appUser.getPassword();
+            validatePassword(password);
+            appUser.setPassword(this.passwordEncoder.encode(password));
+        }
+                    
         return save(appUser);
     }
 
@@ -100,7 +117,7 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
 
 
     /**
-     * Confirm given {@code ConfirmationToken} and enable given {@code AppUser} account.
+     * Confirm given {@code ConfirmationToken} and enable given {@link AppUser} account.
      * 
      * @param email of appUser
      * @param token to confirm
@@ -112,8 +129,26 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
 
         enable(email);
     }
+    
+
+    /**
+     * Validate given password and throw {@link ApiException} if invalid. Regex wont work with encrypted passwords.
+     * 
+     * @param password to check
+     */
+    public void validatePassword(@NotNull(message = VALIDATION_NOT_NULL) String password) {
+
+        if (!Utils.isPasswordValid(password))
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Failed to save user. 'password' pattern invalid.");
+    }
 
     
+    /**
+     * Create new {@link ConfirmationToken}, save it and send a standard registration mail with confirmation link to 
+     * given {@link AppUser}.
+     * 
+     * @param appUser to send the mail to
+     */
     private void sendAccountVerificationMail(AppUser appUser) {
 
         // create confirmation token
@@ -179,7 +214,7 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
         // case: email already taken
         if (this.repository.existsByEmail(appUser.getEmail()))
             throw new ApiException("Failed to save user. User with this email does already exist.");
-            
+           
         appUser.setPassword(passwordEncoder.encode(appUser.getPassword()));
 
         return save(appUser);

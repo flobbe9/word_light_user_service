@@ -127,6 +127,10 @@ public class ApiExceptionHandler {
         // log relevant stackTrace parts
         logPackageStackTrace(exception.getStackTrace());
 
+        // case: bad request
+        if (exception.getStatus().equals(HttpStatus.BAD_REQUEST))
+            return ResponseEntity.badRequest().body(returnPretty(exception.getStatus(), exception.getMessage()));
+
         return ResponseEntity.internalServerError().body(returnPretty(exception.getStatus(), exception.getMessage()));
     }
 

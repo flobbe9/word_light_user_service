@@ -23,7 +23,6 @@ public class Utils {
      * @return converted string or null, if file is null
      * @throws ApiException
      */
-    // TODO: replace odd chars
     public static String fileToString(File file) {
         
         // read to string
@@ -35,7 +34,8 @@ public class Utils {
             while ((line = br.readLine()) != null)
                 stringBuilder.append(line);
 
-            return stringBuilder.toString();
+            String str = stringBuilder.toString();
+            return replaceOddChars(str);
             
         } catch (Exception e) {
             throw new ApiException("Failed to read file to String.", e);
@@ -67,18 +67,43 @@ public class Utils {
     /**
      * Replace odd characters that java uses for special chars like 'ä, ö, ü, ß' etc. with original chars. <p>
      * 
-     * Alters given String.
+     * Does not alter given String.
      * 
      * @param str to fix
      * @return fixed string
      */
     public static String replaceOddChars(String str) {
 
+        // alphabetic
+        str = str.replace("Ã?", "Ä");
         str = str.replace("Ã¤", "ä");
         str = str.replace("Ã¶", "ö");
         str = str.replace("Ã¼", "ü");
         str = str.replace("ÃŸ", "ß");
 
+        // special chars
+        str = str.replace("â?¬", "€");
+
         return str;
+    }
+
+
+    /** 
+     * At least <p>
+     * - eight characters, <p>
+     * - one uppercase letter, <p>
+     * - one lowercase letter,  <p>
+     * - one number and <p>
+     * - one of given special characters. <p>
+     * - maximum 30 characters, 
+     */
+    public static boolean isPasswordValid(String password) {
+
+        if (password == null)
+            throw new ApiException("Failed to validate password. 'password' cannot be null");
+        
+        String regex = "^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[,.;_!#$%&’*+/=?`{|}~^-]).{8,30}$";
+
+        return password.matches(regex);
     }
 }
