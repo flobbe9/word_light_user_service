@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1 shrink-to-fit=no" />
+        <title id="title">Index - vorspiel_userservice</title>
+
+        <style>
+            body {
+                font-family: "Calibri";
+            }
+
+            code {
+                background-color: rgb(221, 221, 221);
+                border-radius: 4px;
+                padding: 2px 4px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div>
+            <h1>vorspiel_userservice</h1>
+
+            <p>REST service handling user related logic for the vorspiel API. Uses Java 17 with Spring Boot and MySQL.</p>
+            <hr>
+        </div>
+
+        <div>
+            <h3>Run</h3>
+
+            <ol>
+                <li>Database and Mailserver: <code>docker-compose -f 'docker-compose.dev.yml' up -d</code></li>
+                <li>API: <code>docker-compose up</code></li>
+            </ol>
+
+            <p>The Api depends on the database and the mailserver (MySQL and maildev docker images) and may not work properly if step 1 is skipped.</p>
+            <hr>
+        </div>
+
+        <div>
+            <h3>Endpoint documentation</h3>
+
+            <a href="http://localhost:4002/swagger-ui/index.html#/" target="_blank">http://localhost:4002/swagger-ui/index.html#/</a>
+        </div>
+    </body>
+</html>
