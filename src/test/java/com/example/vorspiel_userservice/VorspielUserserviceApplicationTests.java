@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.ClassOrderer.OrderAnnotation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.domain.Example;
+import org.springframework.http.HttpStatus;
 import org.springframework.mail.MailException;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -25,9 +25,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.example.vorspiel_userservice.config.SecurityConfig;
 import com.example.vorspiel_userservice.entities.AppUser;
 import com.example.vorspiel_userservice.entities.ConfirmationToken;
 import com.example.vorspiel_userservice.enums.AppUserRole;
@@ -36,11 +38,16 @@ import com.example.vorspiel_userservice.repositories.AppUserRepository;
 import com.example.vorspiel_userservice.repositories.ConfirmationTokenRepository;
 import com.example.vorspiel_userservice.services.AppUserService;
 import com.example.vorspiel_userservice.services.ConfirmationTokenService;
+
+import jakarta.mail.MessagingException;
 import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validator;
 
 
 /**
  * Test class executing all test classes sequentially that access the db. Starts one big integration test. <p>
+ * 
+ * Don't run classes parallel, use {@link Order}.
  * 
  * @since 0.0.1
  */
@@ -60,16 +67,25 @@ class VorspielUserserviceApplicationTests {
     @Autowired
     private ConfirmationTokenRepository confirmationTokenRepository;
 
+    @Autowired
+    private Validator validator;
 
+
+    /**
+     * Includes tests for {@link AppUserService} and {@link AppUser}.
+     * 
+     * @since 0.0.1
+     */
     @TestInstance(Lifecycle.PER_CLASS)
     @Nested
     @Order(1)
+    @TestMethodOrder(org.junit.jupiter.api.MethodOrderer.OrderAnnotation.class)
     public class AppUserServiceTest {
 
         /** Stays in db, should not be deleted by any test */
         private AppUser appUser;
         private String email = "max.mustermann@domain.com";
-        private String password = "Abc123&&";
+        private String password = "Abc123,.";
         private AppUserRole role = AppUserRole.USER;
 
         /** Will be removed after each test in order to be saved again */
@@ -156,10 +172,10 @@ class VorspielUserserviceApplicationTests {
         @Test
         void register_shouldThrowOnDuplicateEmail() {
 
-            assertThrows(ApiException.class, () -> appUserService.register(this.appUser));
-
             assertDoesNotThrow(() -> 
                 expectMailingException(() -> appUserService.register(this.secondAppUser)));
+
+            assertThrows(ApiException.class, () -> appUserService.register(this.secondAppUser));
         }
 
 
@@ -195,6 +211,92 @@ class VorspielUserserviceApplicationTests {
 
 
         @Test
+        @Order(1)
+        void update_shouldUpdateAllFields() {
+            
+            String newEmail = "differentEmail@domain.com";
+            String newPassword = "differenPassword2!";
+            AppUserRole newRole = AppUserRole.ADMIN;
+            boolean isAccountNonExpired = false;
+            boolean isAccountNonLocked = false;
+            boolean isCredentialsNonExpired = false;
+            boolean isEnabled = true;
+
+            // all fields should be new
+            assertNotEquals(newEmail, this.appUser.getEmail());
+            assertFalse(doPasswordsMatch(newPassword, this.appUser.getPassword()));
+            assertNotEquals(newRole, this.appUser.getRole());
+            assertNotEquals(isAccountNonExpired, this.appUser.isAccountNonExpired());
+            assertNotEquals(isAccountNonLocked, this.appUser.isAccountNonLocked());
+            assertNotEquals(isCredentialsNonExpired, this.appUser.isCredentialsNonExpired());
+            assertNotEquals(isEnabled, this.appUser.isEnabled());
+
+            this.appUser.setEmail(newEmail);
+            this.appUser.setPassword(newPassword);
+            this.appUser.setRole(newRole);
+            this.appUser.setAccountNonExpired(isAccountNonExpired);
+            this.appUser.setAccountNonLocked(isAccountNonLocked);
+            this.appUser.setCredentialsNonExpired(isCredentialsNonExpired);
+            this.appUser.setEnabled(isEnabled);
+
+            appUserService.update(this.appUser);
+
+            // retrieve updated user from db
+            AppUser updatedAppUser = appUserRepository.findByEmail(newEmail)
+                                                      .orElseThrow(() -> new ApiException("Failed to find updated user with email: " + newEmail));
+
+            // all fields should be updated
+            assertEquals(newEmail, updatedAppUser.getEmail());
+            assertTrue(doPasswordsMatch(newPassword, updatedAppUser.getPassword()));
+            assertEquals(newRole, updatedAppUser.getRole());
+            assertEquals(isAccountNonExpired, updatedAppUser.isAccountNonExpired());
+            assertEquals(isAccountNonLocked, updatedAppUser.isAccountNonLocked());
+            assertEquals(isCredentialsNonExpired, updatedAppUser.isCredentialsNonExpired());
+            assertEquals(isEnabled, updatedAppUser.isEnabled());
+        }
+
+
+        @Test
+        void update_shouldKeepPasswordIfNotChanged() {
+
+            String password = this.appUser.getPassword();
+
+            appUserService.update(this.appUser);
+
+            AppUser updatedAppUser = appUserRepository.findByEmail(this.email).get();
+
+            assertEquals(password, updatedAppUser.getPassword());
+        }
+
+
+        @Test
+        void update_shouldChangePasswordIfChanged() {
+
+            String password = this.appUser.getPassword();
+            String newPassword = this.password + "&&";
+
+            this.appUser.setPassword(newPassword);
+
+            appUserService.update(this.appUser);
+
+            AppUser updatedAppUser = appUserRepository.findByEmail(this.email).get();
+
+            assertNotEquals(password, updatedAppUser.getPassword());
+
+            // should be encrypted
+            assertTrue(doPasswordsMatch(newPassword, updatedAppUser.getPassword()));
+        }
+
+
+        @Test
+        void update_shouldThrowOnIdNull() {
+
+            this.appUser.setId(null);
+            assertTrue(isApiExceptionBadRequest(() -> appUserService.update(this.appUser)));
+        }
+
+
+        @Test
         void update_shouldThrowOnNonExistingAppUser() {
 
             assertDoesNotThrow(() -> appUserService.update(this.appUser));
@@ -212,28 +314,88 @@ class VorspielUserserviceApplicationTests {
         }
 
 
+        @Test
+        void validatePassword_shouldBeValidPassword() {
+
+            List<String> invalidPasswords = List.of("&Abc123.,",
+                                                    "üöAbc123$&",
+                                                    "11238974Fa3#",
+                                                    "123456789012345678901234567Ab,");
+
+            invalidPasswords.forEach(password -> 
+                assertDoesNotThrow(() -> appUserService.validatePassword(password), "Falsy input: " + password));
+        }
+
+
+        @Test
+        void validatePassword_shouldBeInvalidPassword() {
+
+            List<String> invalidPasswords = List.of(" ",
+                                                 "Abc1,", // shorter than 8
+                                                 "abc123#&", // no uppercase
+                                                 "ABC123^+", // no lowercase
+                                                 "Abcde$§", // no number
+                                                 "Abcde12", // no special char
+                                                 "1234,_", // no alpha char
+                                                 "123456789012345678901234567890aA.", // longer than 30
+                                                 "password");
+
+            invalidPasswords.forEach(password -> 
+                assertTrue(isApiExceptionBadRequest(() -> appUserService.validatePassword(password)), "Falsy input: " + password));
+
+            assertThrows(ConstraintViolationException.class, () -> appUserService.validatePassword(null));
+        }
+
+
+        @Test
+        void appUser_shouldBeValidEmail() {
+
+            List<String> invalidEmails = List.of("name.879secondName@domain.com",
+                                                 "name12-89secondName@domain.net",
+                                                 "name@domain.name.de");
+
+            invalidEmails.forEach(email -> {
+                this.secondAppUser.setEmail(email);
+                assertTrue(validator.validate(this.secondAppUser).isEmpty(), "Falsy input: " + email);
+            });
+        }
+        
+
+        @Test
+        void appUser_shouldBeInvalidEmail() {
+
+            List<String> invalidEmails = List.of(" ",
+                                                 "invalidMaildomain.com",
+                                                 "invalidMail@.com",
+                                                 "invalidMail@domain.",
+                                                 "invalidMail@domain",
+                                                 "invalidMail@domain.weirdSuffix");
+
+            invalidEmails.forEach(email -> {
+                this.secondAppUser.setEmail(email);
+                assertEquals(1, validator.validate(this.secondAppUser).size(), "Falsy input: " + email);
+            });
+
+            this.secondAppUser.setEmail(null);
+            assertEquals(1, validator.validate(this.secondAppUser).size(), "Falsy input: " + null);
+        }
+
+
+        @Test
+        void appUser_shouldValidateRole() {
+
+            assertDoesNotThrow(() -> expectMailingException(() -> appUserService.register(this.secondAppUser)));
+
+            this.secondAppUser.setRole(null);
+            assertThrows(ConstraintViolationException.class, () -> appUserService.register(this.secondAppUser));
+        }
+
+
         @AfterAll
         void cleanAllUp() {
 
             appUserRepository.deleteAll();
             confirmationTokenRepository.deleteAll();
-        }
-
-
-        /**
-         * Executes given runnable. Catches {@code ApiException} and asserts that the cause was a {@link MailException}.
-         * 
-         * @param lambda function to execute
-         */
-        private void expectMailingException(Runnable lambda) {
-
-            try {
-                lambda.run();
-
-            // expect mailing exception
-            } catch (ApiException e) {
-                assertTrue(e.getOriginalException() instanceof MailException);
-            }
         }
     }
 
@@ -320,6 +482,29 @@ class VorspielUserserviceApplicationTests {
         }
 
 
+        @Test
+        void confirmationToken_shouldValidateToken() {
+
+            assertTrue(validator.validate(this.confirmationToken).isEmpty());
+
+            this.confirmationToken.setToken(" ");
+            assertEquals(1, validator.validate(this.confirmationToken).size());
+            
+            this.confirmationToken.setToken(null);
+            assertEquals(1, validator.validate(this.confirmationToken).size());
+        }
+
+
+        @Test
+        void confirmationToken_shouldValidateExpiresAt() {
+
+            assertTrue(validator.validate(this.confirmationToken).isEmpty());
+
+            this.confirmationToken.setExpiresAt(null);
+            assertEquals(1, validator.validate(this.confirmationToken).size());
+        }
+
+
         @AfterAll
         void cleanAllUp() {
 
@@ -368,7 +553,7 @@ class VorspielUserserviceApplicationTests {
 
             assertDoesNotThrow(() -> appUserService.save(this.appUser));
 
-            assertThrows(ConstraintViolationException.class, () -> appUserService.save(null));
+            assertTrue(isApiExceptionBadRequest(() -> appUserService.save(null)));
         }
 
 
@@ -428,7 +613,7 @@ class VorspielUserserviceApplicationTests {
 
             assertDoesNotThrow(() -> appUserService.getById(this.appUser.getId()));
 
-            assertThrows(ConstraintViolationException.class, () -> appUserService.getById(null));
+            assertTrue(isApiExceptionBadRequest(() -> appUserService.getById(null)));
         }
 
 
@@ -467,7 +652,7 @@ class VorspielUserserviceApplicationTests {
      */
     private void removeAppUser(AppUser appUser) {
 
-        this.appUserRepository.delete(appUser);
+        this.appUserRepository.deleteByEmail(appUser.getEmail());
         assertFalse(this.appUserRepository.existsByEmail(appUser.getEmail()), "Failed to clean up after test.");
     }
 
@@ -501,5 +686,55 @@ class VorspielUserserviceApplicationTests {
             return appUsers.get().getId();
 
         return 1l;
+    }
+
+
+    /**
+     * Catch {@link ApiException} and check if http status is {@code BAD_REQUEST}.
+     * 
+     * @param lambda function to call inside the try catch block
+     * @return true if status of exception is 400, else false
+     */
+    private boolean isApiExceptionBadRequest(Runnable lambda) {
+
+        try {
+            lambda.run();
+
+        } catch (ApiException e) {
+            return e.getStatus().equals(HttpStatus.BAD_REQUEST);
+        }
+
+        return false;
+    }
+
+
+    /**
+     * Executes given runnable. Catches {@code ApiException} and asserts that the cause was a {@link MailException} or a {@link MessagingException}.
+     * 
+     * @param lambda function to execute
+     */
+    private void expectMailingException(Runnable lambda) {
+
+        try {
+            lambda.run();
+
+        // expect mailing exception
+        } catch (ApiException e) {
+            Exception originalException = e.getOriginalException();
+            assertTrue(originalException instanceof MailException || originalException instanceof MessagingException);
+        }
+    }
+
+
+    /**
+     * Check if encoded password matches the raw one.
+     * 
+     * @param decodedPassword raw password to check
+     * @param encodedPassword encrypted password to compare to
+     * @return true if ecoded password matches the decoded one
+     */
+    private static boolean doPasswordsMatch(String decodedPassword, String encodedPassword) {
+
+        return new SecurityConfig().passwordEncoder().matches(decodedPassword, encodedPassword);  
     }
 }
