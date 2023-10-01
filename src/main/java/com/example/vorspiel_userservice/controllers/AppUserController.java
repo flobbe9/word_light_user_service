@@ -2,6 +2,8 @@ package com.example.vorspiel_userservice.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -27,14 +29,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 /**
  * Rest controller containing all endpoints regarding the {@link AppUser} entity.<p>
  * 
- * Listens onyl for "/api/appUser" mappings
+ * Listens onyl for "/api/appUser/" mappings
  * 
  * @since 0.0.1
  */
 @RestController
 @RequestMapping("/api/appUser")
 @Tag(name = "AppUser logic")
-// TODO: add tests
+@Validated
 public class AppUserController {
 
     @Autowired
@@ -42,36 +44,36 @@ public class AppUserController {
     
 
     @PostMapping("/register")
-    @Operation(summary = "Create new appUser and send verification mail.")
-    public ApiExceptionFormat register(@RequestBody @NotNull(message = "'appUser' cannot be null") @Valid AppUser appUser) {
+    @Operation(summary = "Create new appUser and send verification mail", description = "Only email, password and role are required")
+    public ResponseEntity<ApiExceptionFormat> register(@RequestBody @NotNull(message = "'appUser' cannot be null") @Valid AppUser appUser) {
 
         this.appUserService.validatePassword(appUser.getPassword());
 
         // save as disabled user
         this.appUserService.register(new AppUser(appUser.getEmail(), appUser.getPassword(), appUser.getRole()));
 
-        return ApiExceptionHandler.returnPrettySuccess(HttpStatus.CREATED);
+        return ResponseEntity.status(201).body(ApiExceptionHandler.returnPrettySuccess(HttpStatus.CREATED));
     }
 
 
     @PutMapping("/update")
     @Operation(summary = "Update existing appUser.")
-    public ApiExceptionFormat update(@RequestBody @NotNull(message = "'appUser' cannot be null") @Valid AppUser appUser) {
+    public ResponseEntity<ApiExceptionFormat> update(@RequestBody @NotNull(message = "'appUser' cannot be null") @Valid AppUser appUser) {
 
         this.appUserService.update(appUser);
 
-        return ApiExceptionHandler.returnPrettySuccess(HttpStatus.OK);
+        return ResponseEntity.ok().body(ApiExceptionHandler.returnPrettySuccess(HttpStatus.OK));
     }
 
 
     @GetMapping("/confirmAccount")
     @Operation(summary = "Confirm existing account of appUser.")
-    public ApiExceptionFormat confirmAccount(@RequestParam @NotBlank(message = "'email' cannot be blank or null") @Parameter(example = "max.mustermann@domain.com") String email, 
+    public ResponseEntity<ApiExceptionFormat> confirmAccount(@RequestParam @NotBlank(message = "'email' cannot be blank or null") @Parameter(example = "max.mustermann@domain.com") String email, 
                                              @RequestParam @NotBlank(message = "'token cannot be blank or null") String token) {
 
         this.appUserService.confirmAccount(email, token);
 
-        return ApiExceptionHandler.returnPrettySuccess(HttpStatus.OK);
+        return ResponseEntity.ok().body(ApiExceptionHandler.returnPrettySuccess(HttpStatus.OK));
     }
 
 
