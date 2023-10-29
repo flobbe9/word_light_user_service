@@ -22,8 +22,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @EnableWebSecurity
 public class SecurityConfig {
     
-    @Value("${FRONTEND_BASE_URL}")
-    private String frontendBaseUrl;
+    @Value("${GATEWAY_BASE_URL}")
+    private String gatewayBaseUrl;
 
     @Value("${CSRF_ENABLED}")
     private String csrfEnabled;
@@ -47,18 +47,16 @@ public class SecurityConfig {
 
     
     /**
-     * Allow frontend url with any pattern.
-     * 
-     * @return
+     * Allow gateway url only with any pattern.
      */
     @Bean
-    public WebMvcConfigurer corsConfigurer() {
+    WebMvcConfigurer corsConfigurer() {
 
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins(frontendBaseUrl)
+                        .allowedOrigins("http://localhost:2000")
                         .allowedMethods("GET", "POST", "UPDATE", "DELETE");
             }
         };
@@ -66,7 +64,7 @@ public class SecurityConfig {
 
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
+    PasswordEncoder passwordEncoder() {
 
         return new BCryptPasswordEncoder(10);
     }

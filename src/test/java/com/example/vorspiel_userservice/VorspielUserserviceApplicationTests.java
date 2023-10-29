@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.mail.MailException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,7 +30,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.example.vorspiel_userservice.config.SecurityConfig;
 import com.example.vorspiel_userservice.entities.AppUser;
 import com.example.vorspiel_userservice.entities.ConfirmationToken;
 import com.example.vorspiel_userservice.enums.AppUserRole;
@@ -69,6 +69,9 @@ class VorspielUserserviceApplicationTests {
 
     @Autowired
     private Validator validator;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
 
     /**
@@ -733,8 +736,8 @@ class VorspielUserserviceApplicationTests {
      * @param encodedPassword encrypted password to compare to
      * @return true if ecoded password matches the decoded one
      */
-    private static boolean doPasswordsMatch(String decodedPassword, String encodedPassword) {
+    private boolean doPasswordsMatch(String decodedPassword, String encodedPassword) {
 
-        return new SecurityConfig().passwordEncoder().matches(decodedPassword, encodedPassword);  
+        return passwordEncoder.matches(decodedPassword, encodedPassword);  
     }
 }
