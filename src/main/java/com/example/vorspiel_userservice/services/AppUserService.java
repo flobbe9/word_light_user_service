@@ -70,6 +70,7 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
      * @param appUser to register
      * @return registered appUser
      */
+    // TODO: consider sending email first, sothat the second try will not throw duplicate
     public AppUser register(@NotNull(message = VALIDATION_NOT_NULL) @Valid AppUser appUser) {
 
         validatePassword(appUser.getPassword());
@@ -106,7 +107,7 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
 
 
     @Override
-    public UserDetails loadUserByUsername(String email) {
+    public AppUser loadUserByUsername(String email) {
 
         if (email == null || email.isBlank())
             throw new ApiException("Failed to load user. " + VALIDATION_EMAIL_NOT_BLANK);
@@ -194,7 +195,7 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
      */
     private void enable(String email) {
 
-        AppUser appUser = (AppUser) loadUserByUsername(email);
+        AppUser appUser = loadUserByUsername(email);
 
         appUser.setEnabled(true);
 

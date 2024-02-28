@@ -132,7 +132,7 @@ class VorspielUserserviceApplicationTests {
             assertFalse(this.appUser.isEnabled());
 
             appUserService.confirmAccount(this.email, this.token);
-            this.appUser = (AppUser) appUserService.loadUserByUsername(this.email);
+            this.appUser = appUserService.loadUserByUsername(this.email);
 
             assertTrue(this.appUser.isEnabled());
         }

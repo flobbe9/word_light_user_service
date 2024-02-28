@@ -81,6 +81,6 @@ public class AppUserController {
     @Operation(summary = "Find appUser by email.")
     public AppUser getByEmail(@RequestParam @NotBlank(message = "'email' cannot be blank") @Parameter(example = "max.mustermann@domain.com") String email) {
 
-        return (AppUser) this.appUserService.loadUserByUsername(email);
+        return this.appUserService.loadUserByUsername(email);
     }
 }
