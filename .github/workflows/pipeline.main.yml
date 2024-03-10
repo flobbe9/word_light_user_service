@@ -1,4 +1,4 @@
-name: vorspiel_userservice main
+name: user_service main
 
 run-name: ${{ github.event.head_commit.message }}
 on: 
@@ -43,4 +43,4 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/vorspiel_userservice:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/user_service:latest
