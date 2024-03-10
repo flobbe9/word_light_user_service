@@ -6,13 +6,12 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
-import de.word_light.user_service.abstractClasses.AbstractService;
+import de.word_light.user_service.abstracts.AbstractService;
 import de.word_light.user_service.entities.AppUser;
 import de.word_light.user_service.entities.ConfirmationToken;
 import de.word_light.user_service.exception.ApiException;
@@ -33,6 +32,8 @@ import jakarta.validation.constraints.NotNull;
  */
 @Service
 @Validated
+// TODO: add docker-compose
+// TODO: add user service to docker-compose all
 public class AppUserService extends AbstractService<AppUser, AppUserRepository> implements UserDetailsService {
 
     public static final String VALIDATION_NOT_NULL = "'appUser' cannot be null.";
@@ -174,7 +175,7 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
     private String createVerificationMail(AppUser appUser, ConfirmationToken confirmationToken) {
 
         // read to string
-        String htmlText = Utils.fileToString(verificationMail);
+        String htmlText = Utils.fileToString(this.verificationMail);
 
         String confirmationLink = this.frontendBaseUrl + "/confirmAccount?" + 
                                   "email=" + appUser.getEmail() + "&" +

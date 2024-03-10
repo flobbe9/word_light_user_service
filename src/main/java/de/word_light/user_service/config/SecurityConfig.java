@@ -15,32 +15,45 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import jakarta.annotation.PostConstruct;
+import lombok.extern.log4j.Log4j2;
+
 
 /**
- * Configuration class to authentiacate requests.<p>
+ * Configuration class to authentiacate requests.
  * 
  * @since 0.0.1
  */
 @Configuration
 @EnableWebSecurity
+@Log4j2
 public class SecurityConfig {
 
     @Value("${FRONTEND_BASE_URL}")
-    private String frontendBaseUrl;
-    
-    @Value("${CSRF_ENABLED}")
-    private String csrfEnabled;
+    private String FRONTEND_BASE_URL;
 
+    @Value("${MAPPING}")
+    private String MAPPING;
+
+    @Value("${ENV}")
+    private String ENV;
+
+
+    @PostConstruct
+    void init() {
+
+        log.info("Configuring api security...");
+    }
+
+    
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
-        // enable csrf in prod only
-        if (csrfEnabled.equalsIgnoreCase("true"))
-            http.csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()));
-        else
+        
+        // enable csrf in prod onlye
+        if (!this.ENV.equalsIgnoreCase("prod"))
             http.csrf(csrf -> csrf.disable());
-
+        
+        // routes
         http.authorizeHttpRequests(request -> request
                 .anyRequest()
                 .permitAll())
@@ -52,22 +65,20 @@ public class SecurityConfig {
 
 
     /**
-     * Allow methods {@code GET, POST, UPDATE, DELETE}, origins {@code frontendBaseUrl}, headers {@code "*"}, credentials and
-     * only mappings for {@code /api/appUser/**}.
+     * Configure cors.
      * 
      * @return the configured {@link CorsConfigurationSource}
      */
     private CorsConfigurationSource corsConfig() {
 
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(frontendBaseUrl));
-        configuration.setAllowedMethods(List.of("GET", "POST", "UPDATE", "DELETE"));
+        configuration.setAllowedOrigins(List.of(this.FRONTEND_BASE_URL));
+        configuration.setAllowedMethods(List.of("GET", "POST", "UPDATE", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // TODO: add more mappings?
-        source.registerCorsConfiguration("/api/appUser/**", configuration);
+        source.registerCorsConfiguration("/" + this.MAPPING + "/**", configuration);
 
         return source;
     }

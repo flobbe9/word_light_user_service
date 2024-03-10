@@ -19,5 +19,5 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
       - name: Start db and mail server
-        run: docker-compose -f 'docker-compose.dev.yml' up -d
+        run: docker-compose -f 'docker-compose.db.mail.yml' up -d
       - run: gradle clean build

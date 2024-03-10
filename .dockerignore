@@ -1,15 +1,27 @@
 ### Gradle ###
 .gradle/
 build/
+bin/
 gradle/
-build
 gradlew
 gradlew.bat
 
 ### VS Code ###
 .vscode/
 
-### Other ###
+### Git ###
+.git
 .github
 .gitignore
+.gitattributes
+
+### Docker ###
+Dockerfile
+docker-compose.yml
+docker-compose.db.mail.yml
+docker-compose.local.yml
+docker-compose.all.yml
+.dockerignore
+
+### Other ###
 *.md

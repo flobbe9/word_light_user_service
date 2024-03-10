@@ -3,11 +3,12 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1 shrink-to-fit=no" />
-        <title id="title">Index - user_service</title>
+        <title id="title" th:text="@{${WEBSITE_NAME} + ' - ' + ${API_NAME}}"></title>
 
         <style>
             body {
                 font-family: "Calibri";
+                margin: 8px 27px;
             }
 
             code {
@@ -15,33 +16,56 @@
                 border-radius: 4px;
                 padding: 2px 4px;
             }
+
+            hr {
+                margin-top: 2em;
+            }
         </style>
     </head>
 
     <body>
         <div>
-            <h1>user_service</h1>
+            <h1 th:text="${API_NAME}"></h1>
 
-            <p>REST service handling user related logic for the vorspiel API. Uses Java 17 with Spring Boot and MySQL.</p>
+            <p>REST service handling the user related logic for the <span th:text="${WEBSITE_NAME}"></span> API. Uses Java 17 with Spring Boot.</p>
             <hr>
         </div>
 
         <div>
             <h3>Run</h3>
 
-            <ol>
-                <li>Database and Mailserver: <code>docker-compose -f 'docker-compose.dev.yml' up -d</code></li>
-                <li>API: <code>docker-compose up</code></li>
-            </ol>
-
-            <p>The Api depends on the database and the mailserver (MySQL and maildev docker images) and may not work properly if step 1 is skipped.</p>
+            <div>
+                <code>$ docker-compose -f 'docker-compose.local.yml' up</code><br>
+                Call this inside project root folder of repository inside dev or stage branch.
+            </div>
             <hr>
         </div>
 
         <div>
-            <h3>Endpoint documentation</h3>
+            <h3>Endpoints</h3>
 
-            <a href="http://localhost:4002/swagger-ui/index.html#/" target="_blank">http://localhost:4002/swagger-ui/index.html#/</a>
+            <a th:href="@{${BASE_URL} + '/swagger-ui/index.html#/'}" target="_blank">
+                <span th:text="${BASE_URL}"></span>/swagger-ui/index.html#/
+            </a>
+            <hr>
+        </div>
+
+        <div>
+            <h3>Repos</h3>
+            <a href="https://github.com/flobbe9/word_light_user_service" target="_blank">https://github.com/flobbe9/word_light_user_service</a> <br>
+
+            <a href="https://github.com/flobbe9/word_light_document_builder" target="_blank">https://github.com/flobbe9/word_light_document_builder</a> <br>
+            
+            <a href="https://github.com/flobbe9/word_light_frontend" target="_blank">https://github.com/flobbe9/word_light_frontend</a> <br>
+
+            <a href="https://github.com/flobbe9/word_light_gateway" target="_blank">https://github.com/flobbe9/word_light_gateway</a>
+            <hr>
+        </div>
+
+        <div>
+            <h3>Versions</h3>
+            <p>API Version: <span th:text="${API_VERSION}"></span></p>
+            <p>Database Version: <span th:text="${DB_VERSION}"></span></p>
         </div>
     </body>
 </html>

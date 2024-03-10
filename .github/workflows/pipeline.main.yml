@@ -43,4 +43,4 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/user_service:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/word_light_user_service:latest

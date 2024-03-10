@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  api:
+    depends_on: 
+      db: 
+        condition: service_healthy
+    image: flobbe9/word_light_user_service
+    container_name: ${API_NAME}
+    ports: 
+      - ${PORT}:${PORT}
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:${DB_PORT}/${DB_NAME}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO}
+      # replace prod ip for local testing
+      - HOST=localhost
+      - SSL_KEY_STORE=classpath:ssl/api.p12
+      - SSL_KEY_ALIAS=api
+      - SSL_KEY_STORE_PASSWORD=password
+    healthcheck:
+      test: wget --no-verbose --no-check-certificate --tries=1 --spider ${PROTOCOL}://api:${PORT} || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+    restart: on-failure
+      
+  db:
+    image: mysql
+    container_name: db
+    ports:
+      - ${DB_PORT}:${DB_PORT}
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${SPRING_DATASOURCE_USERNAME}
+      MYSQL_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: Europe/Berlin
+    healthcheck:
+      test: mysql -u${SPRING_DATASOURCE_USERNAME} -p${SPRING_DATASOURCE_PASSWORD}
+      start_period: 5s
+      interval: 5s
+      timeout: 5s
+      retries: 55
+    restart: on-failure

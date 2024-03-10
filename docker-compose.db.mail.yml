@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql
+    container_name: ${DB_NAME}_db
+    ports:
+        - ${DB_PORT}:${DB_PORT}
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${SPRING_DATASOURCE_USERNAME}
+      MYSQL_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: Europe/Berlin
+    healthcheck:
+      test: mysql -u${SPRING_DATASOURCE_USERNAME} -p${SPRING_DATASOURCE_PASSWORD}
+      start_period: 5s
+      interval: 5s
+      timeout: 5s
+      retries: 55
+    restart: on-failure
+
+  mailserver:
+    image: maildev/maildev
+    container_name: mail_server
+    ports:
+        - 1080:1080
+        - 1025:1025

@@ -2,8 +2,7 @@ package de.word_light.user_service.entities;
 
 import java.time.LocalDateTime;
 
-import de.word_light.user_service.abstractClasses.AbstractEntity;
-
+import de.word_light.user_service.abstracts.AbstractEntity;
 import jakarta.persistence.Entity;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
-import de.word_light.user_service.abstractClasses.AbstractService;
+import de.word_light.user_service.abstracts.AbstractService;
 import de.word_light.user_service.entities.ConfirmationToken;
 import de.word_light.user_service.exception.ApiException;
 import de.word_light.user_service.repositories.ConfirmationTokenRepository;

@@ -1,12 +1,19 @@
-# vorspiel_userservice
-REST service handling user related logic for the vorspiel API. Uses Java 17 with Spring Boot and MySQL.
+# word_light_user_service
+REST service handling user related logic for the Word light API. Uses Java 17 with Spring Boot.
 
-## Run
-1. Database and Mailserver: ```docker-compose -f 'docker-compose.dev.yml' up -d```<br>
-2. Api: ```docker-compose up``` <br>
+# Run 
+### Locally
+```docker-compose -f docker-compose.local.yml up``` <br>
+Call this inside project root folder of repository inside dev or stage branch. <br>
 
-The Api depends on the database and the mailserver (MySQL and maildev docker images) and may not work properly if step 1 is skipped.
+### Dockerhub
+```docker-compose up``` <br>
+Call this with .env file in same folder as docker-compose.yml. <br>
 
-## Endpoint documentation
-<!-- TODO: add prod version when going live -->
-http://localhost:4002/swagger-ui/index.html#/
+### The whole thing
+```docker-compose -f docker-compose.all.yml up``` <br>
+Call this with .env file in same folder as docker-compose.all.yml file. <br>
+Will start the whole microservice including frontend etc. using images from Dockerhub. No further configuration needed. Access api at https://localhost
+
+# More documentation
+Run api, then visit http://localhost:4002 or https://localhost:4002 (if run on stage branch)

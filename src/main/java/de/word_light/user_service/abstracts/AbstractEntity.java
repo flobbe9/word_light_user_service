@@ -1,4 +1,4 @@
-package de.word_light.user_service.abstractClasses;
+package de.word_light.user_service.abstracts;
 
 import java.time.LocalDateTime;
 
@@ -25,7 +25,7 @@ public abstract class AbstractEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Schema(example = "1")
+    @Schema(hidden = true)
     private Long id;
 
     @JsonIgnore
@@ -33,4 +33,13 @@ public abstract class AbstractEntity {
 
     @JsonIgnore
     private LocalDateTime updated;
+
+
+    public AbstractEntity() {
+
+        if (this.created == null)
+            this.created = LocalDateTime.now();
+
+        this.updated = LocalDateTime.now();
+    }
 }

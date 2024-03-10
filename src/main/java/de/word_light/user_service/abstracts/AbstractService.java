@@ -1,6 +1,5 @@
-package de.word_light.user_service.abstractClasses;
+package de.word_light.user_service.abstracts;
 
-import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -34,12 +33,6 @@ public abstract class AbstractService<E extends AbstractEntity, Repository exten
 
         if (entity == null)
             throw new ApiException(HttpStatus.BAD_REQUEST, "Failed to save entity. 'entity' cannot be null.");
-
-        // case: entity does not exist yet
-        if (entity.getCreated() == null)
-            entity.setCreated(LocalDateTime.now());
-
-        entity.setUpdated(LocalDateTime.now());
 
         return this.repository.save(entity);
     }

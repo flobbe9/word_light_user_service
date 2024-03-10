@@ -1,27 +1,48 @@
 server:
-    port: 4002
-    error: 
+    port: ${PORT}
+    error:
         include-message: always
 
+    ### SSL
+    ssl:
+        key-store-type: ${SSL_KEY_STORE_TYPE}
+        key-store: ${SSL_KEY_STORE}
+        key-store-password: ${SSL_KEY_STORE_PASSWORD}
+        key-alias: ${SSL_KEY_ALIAS}
+        enabled: ${SSL_ENABLED}
 
 spring:
-    ## db
+    application:
+        name: ${API_NAME}
+    servlet:
+        multipart:
+            # increase max file size for request payload
+            max-file-size: 10MB
+            max-request-size: 10MB
+    autoconfigure:
+        # disable auto generated password
+        exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+    config:
+        # include .env file
+        import: optional:file:.env[.properties]
+
+    ### DB
     datasource:
-        url: jdbc:mysql://localhost:3306/vorspiel
-        # url: jdbc:h2:mem:vorspiel.db
-        username: root
-        password:
+        url: jdbc:mysql://localhost:${DB_PORT}/${DB_NAME}
+        # url: jdbc:h2:mem:${DB_NAME}.db
+        username: ${SPRING_DATASOURCE_USERNAME}
+        password: ${SPRING_DATASOURCE_PASSWORD}
     jpa:
         database-platform: org.hibernate.dialect.MySQLDialect
         # database-platform: org.hibernate.dialect.H2Dialect
         hibernate:
-            ddl-auto: create-drop
+            ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
         defer-datasource-initialization: true
         open-in-view: false
         # console: 
         #     enabled: true
         #     path: /h2
-
+        
     ## mail (maildev access inbox on localhost:1080)
     mail:
         host: localhost
@@ -29,6 +50,3 @@ spring:
         sender: 
             name: DocumentBuilder Team
             email: documentBuilder.mailing@outlook.de
-
-    config:
-        import: optional:file:.env[.properties] # include .env file

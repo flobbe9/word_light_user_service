@@ -1,0 +1,36 @@
+version: "3.9"
+
+# inside dev or stage branch
+services:
+  api:
+    depends_on: 
+      - db
+      - mail_server
+    build: .
+    container_name: api
+    ports: 
+        - ${PORT}:${PORT}
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:${DB_PORT}/${DB_NAME}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO}
+  
+  db:
+    image: mysql
+    container_name: db
+    ports:
+        - ${DB_PORT}:${DB_PORT}
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${SPRING_DATASOURCE_USERNAME}
+      MYSQL_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: Europe/Berlin
+
+  mail_server:
+    image: maildev/maildev
+    container_name: mail_server
+    ports:
+        - 1080:1080
+        - 1025:1025

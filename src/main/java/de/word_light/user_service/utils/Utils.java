@@ -3,11 +3,30 @@ package de.word_light.user_service.utils;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.OutputStream;
 import java.io.Reader;
+import java.nio.file.Files;
+import java.time.DateTimeException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Arrays;
+import java.util.Set;
 
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.Nullable;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+
+import de.word_light.user_service.abstracts.FileDeletionCondition;
 import de.word_light.user_service.exception.ApiException;
+import lombok.extern.log4j.Log4j2;
 
 
 /**
@@ -15,7 +34,21 @@ import de.word_light.user_service.exception.ApiException;
  * 
  * @since 0.0.1
  */
+@Log4j2
+@Configuration
 public class Utils {
+    
+    public static final String RESOURCES_FOLDER = "src/main/resources/";
+    public static final String STATIC_FOLDER = RESOURCES_FOLDER + "/static";
+    public static final String MAIL_FOLDER = RESOURCES_FOLDER + "mail/";
+    public static final String IMG_FOLDER = RESOURCES_FOLDER + "img/";
+
+    public static final String VERIFICATION_MAIL_FILE_NAME = "verificationMail.html";
+    public static final String FAVICON_FILE_NAME = "favicon.png"; 
+
+    /** list of file names that should never be deleted during clean up processes */
+    public static final Set<String> KEEP_FILES = Set.of(".gitkeep");
+
 
     /**
      * Convert file into String using {@link BufferedReader}.
@@ -87,6 +120,21 @@ public class Utils {
 
         return str;
     }
+    
+
+    /**
+     * Prepends a '/' to given String if there isn't already one.
+     * 
+     * @param str String to prepend the slash to
+     * @return sring with "/" prepended or just "/" if given string is null. Does not alter given str
+     */
+    public static String prependSlash(String str) {
+
+        if (str == null || str.equals(""))
+            return "/";
+
+        return str.charAt(0) == '/' ? str : "/" + str;
+    }
 
 
     /** 
@@ -106,5 +154,224 @@ public class Utils {
         String regex = "^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[,.;_!#$%&’*+/=?`{|}~^-]).{8,30}$";
 
         return password.matches(regex);
+    }
+
+
+    /**
+     * Iterate given folder and delete files/folders inside if gien lambda returns true. <p>
+     * 
+     * If lambda is {@code null} all files and folders in given folder will be deleted. <p>
+     * 
+     * Files from {@link #KEEP_FILES} will not be deleted.
+     * 
+     * @param folderPath path of the folder to iterate content of
+     * @param lambda boolean function taking a {@code File} as param to determine if given file should be deleted or not
+     * @return true if all deletions were successfull
+     * @see FileDeletionCondition for lambda definition
+     */
+    public static boolean clearFolder(String folderPath, @Nullable FileDeletionCondition lambda) {
+
+        if (folderPath == null) {
+            log.warn("Failed to clear resourceFolder. 'folderPath' cannot be null.");
+            return false;
+        }
+
+        // case: not a directory
+        File folder = new File(folderPath);
+        if (!folder.isDirectory()) {
+            log.warn("Failed to clear resourceFolder. 'folderPath' " + folderPath + " does not reference a directory.");
+            return false;
+        }
+
+        File[] files = folder.listFiles();
+        boolean deletionSuccessfull = true;
+
+        // iterate and delete
+        for (File file : files)  {
+            boolean deletionCondition = lambda != null ? lambda.shouldFileBeDeleted(file) : true;
+
+            if (deletionCondition && !isKeepFile(file))
+                if (!file.delete()) {
+                    log.warn("Failed to clear resourceFolder. Could not delete file: " + file.getName());
+                    deletionSuccessfull = false;
+                }
+        }
+            
+        return deletionSuccessfull;
+    }
+
+
+    /**
+     * Helper that calls {@link #clearFolder(String, FileDeletionCondition)} and deletes all files with given file names.
+     * 
+     * @param folder directory to search the file in
+     * @param fileNames names of files to delete
+     * @return true if deletion was successfull
+     */
+    public static boolean clearFolderByFileName(String folder, String... fileNames) {
+
+        if (fileNames == null || fileNames.length == 0) 
+            return Utils.clearFolder(folder, null);
+        
+        return Utils.clearFolder(folder, new FileDeletionCondition() {
+
+            @Override
+            public boolean shouldFileBeDeleted(File file) {
+
+                return Arrays.asList(fileNames).contains(file.getName());
+            }
+        });   
+    }
+
+
+    /**
+     * Prepends current date and time to given string. Replace ':' with '-' due to .docx naming conditions.
+     * 
+     * @param str String to format
+     * @return current date and time plus str
+     */
+    public static String prependDateTime(String str) {
+
+        return LocalDateTime.now().toString().replace(":", "-") + "_" + str;
+    }
+
+
+    /**
+     * Writes given byte array to file into {@link #STATIC_FOLDER}.
+     * 
+     * @param bytes content of file
+     * @param fileName name of the file
+     * @return file or {@code null} if a param is invalid
+     */
+    public static File byteArrayToFile(byte[] bytes, String fileName) {
+
+        String completeFileName = STATIC_FOLDER + prependSlash(fileName);
+
+        if (bytes == null) 
+            return null;
+        
+        try (OutputStream fos = new FileOutputStream(completeFileName)) {
+            fos.write(bytes);
+
+            return new File(completeFileName);
+
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+
+    /**
+     * Read given file to byte array.
+     * 
+     * @param file to read
+     * @return byte array
+     */
+    public static byte[] fileToByteArray(File file) {
+
+        try {
+            return Files.readAllBytes(file.toPath());
+
+        } catch (Exception e) {
+            throw new ApiException("Failed to read file to byte array.", e);
+        }
+    }
+
+
+    public static boolean isKeepFile(File file) {
+
+        return KEEP_FILES.contains(file.getName());
+    }
+    
+
+    public static boolean isInteger(String str) {
+
+        try {
+            Integer.parseInt(str);
+
+            return true;
+
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+
+    /**
+     * @param object to convert to json string
+     * @return given object as json string
+     */
+    public static String objectToJson(Object object) {
+
+        ObjectWriter objectWriter = new ObjectMapper().writer().withDefaultPrettyPrinter();
+
+        try {
+            return objectWriter.writeValueAsString(object);
+
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            throw new ApiException("Failed to convert object to json String.", e);
+        }
+    }
+
+
+    /**
+     * @param millis time to convert in milli seconds
+     * @param timeZone to use for conversion, i.e. {@code "UTC"} or {@code "Europe/Berlin"}. If invalid, system default will be used.
+     * @return given time as {@link LocalDateTime} object or null if {@code millis} is invalid
+     */
+    public static LocalDateTime millisToLocalDateTime(long millis, @Nullable String timeZone) {
+
+        ZoneId zoneId;
+        try {
+            zoneId = ZoneId.of(timeZone);
+
+        // case: invalid timeZone
+        } catch (DateTimeException | NullPointerException e) {
+            zoneId = ZoneId.systemDefault();
+        }
+
+        try {
+            Instant instant = Instant.ofEpochMilli(millis);
+            return LocalDateTime.ofInstant(instant, zoneId);
+            
+        // case: invalid millis
+        } catch (DateTimeException e) {
+            return null;
+        }
+    }
+
+
+    @Bean
+    File verificationMail() {
+
+        return getFile(MAIL_FOLDER + VERIFICATION_MAIL_FILE_NAME);
+    }
+
+
+    @Bean
+    File favicon() {
+
+        return getFile(IMG_FOLDER + FAVICON_FILE_NAME);
+    }
+
+
+    /**
+     * Retrieve file or throw {@code ApiException}.
+     * 
+     * @param filePath of file
+     * @return file or null if filePath is null
+     */
+    private File getFile(String filePath) {
+
+        if (filePath == null)
+            return null;
+
+        File verificationMail = new File(filePath);
+
+        if (!verificationMail.exists())
+            throw new ApiException("Failed to load resource: " + filePath);
+
+        return verificationMail;
     }
 }
