@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import de.word_light.user_service.abstracts.AbstractService;
+import de.word_light.user_service.entities.AppUser;
 import de.word_light.user_service.entities.ConfirmationToken;
 import de.word_light.user_service.exception.ApiException;
 import de.word_light.user_service.repositories.ConfirmationTokenRepository;
@@ -17,6 +18,8 @@ import jakarta.validation.constraints.NotBlank;
 
 @Service
 @Validated
+// TODO: add cron job deleting old tokens every day or so
+// TODO: adjust tests
 public class ConfirmationTokenService extends AbstractService<ConfirmationToken, ConfirmationTokenRepository> {
 
     private static final int CREATE_UNIQUE_UUID_TRIES = 1000;
@@ -31,13 +34,14 @@ public class ConfirmationTokenService extends AbstractService<ConfirmationToken,
     /**
      * Generate non existing token and save to db with default expiration date.
      * 
+     * @param appUser related to this token
      * @return save confirmation token
      */
-    public ConfirmationToken saveNew() {
+    public ConfirmationToken saveNew(AppUser appUser) {
 
         String token = createNonExistingToken();
 
-        return save(new ConfirmationToken(token));
+        return save(new ConfirmationToken(token, appUser));
     }
     
 
@@ -50,8 +54,9 @@ public class ConfirmationTokenService extends AbstractService<ConfirmationToken,
      * - token is expired
      * 
      * @param token to confirm
+     * @return the appUser related to the token
      */
-    public void confirmToken(@NotBlank(message = VALIDATION_TOKEN_NOT_BLANK) String token) {
+    public AppUser confirmToken(@NotBlank(message = VALIDATION_TOKEN_NOT_BLANK) String token) {
 
         ConfirmationToken confirmationToken = getByToken(token);
 
@@ -66,6 +71,8 @@ public class ConfirmationTokenService extends AbstractService<ConfirmationToken,
 
         // save token
         save(confirmationToken);
+
+        return confirmationToken.getAppUser();
     }
 
 

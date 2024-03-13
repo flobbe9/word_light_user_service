@@ -47,7 +47,7 @@ public class AppUserControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private String requestMapping = "/api/appUser";
+    private String requestMapping = "/${MAPPING}";
 
     private AppUser appUser;
     private String email = "max.mustermann@domain.com";

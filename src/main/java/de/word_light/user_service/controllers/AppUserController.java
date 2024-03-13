@@ -29,12 +29,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 /**
  * Rest controller containing all endpoints regarding the {@link AppUser} entity.<p>
  * 
- * Listens onyl for "/api/appUser/" mappings
+ * Listens onyl for "/api/userService/" mappings
  * 
  * @since 0.0.1
  */
 @RestController
-@RequestMapping("/api/appUser")
+@RequestMapping("${MAPPING}")
 @Tag(name = "AppUser logic")
 @Validated
 public class AppUserController {
@@ -66,12 +66,16 @@ public class AppUserController {
     }
 
 
-    @GetMapping("/confirmAccount")
+    // TODO: don't retrieve mail
+    // TODO: change get to post
+    // TODO: adjust tests
+    @PostMapping("/confirmAccount")
     @Operation(summary = "Confirm existing account of appUser.")
-    public ResponseEntity<ApiExceptionFormat> confirmAccount(@RequestParam @NotBlank(message = "'email' cannot be blank or null") @Parameter(example = "max.mustermann@domain.com") String email, 
-                                             @RequestParam @NotBlank(message = "'token cannot be blank or null") String token) {
+    public ResponseEntity<ApiExceptionFormat> confirmAccount(
+        // @RequestParam @NotBlank(message = "'email' cannot be blank or null") @Parameter(example = "max.mustermann@domain.com") String email, 
+                                                             @RequestParam @NotBlank(message = "'token' cannot be blank or null") String token) {
 
-        this.appUserService.confirmAccount(email, token);
+        this.appUserService.confirmAccount(token);
 
         return ResponseEntity.ok().body(ApiExceptionHandler.returnPrettySuccess(HttpStatus.OK));
     }

@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 /**
  * Class handling http requests for root path '/'.
  * 
- * @since 0.0.6
+ * @since 0.0.1
  */
 @RequestMapping("/")
 @RestController

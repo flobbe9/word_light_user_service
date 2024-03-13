@@ -1,28 +1,39 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>DocumentBuilder | Bestätigen Sie Ihre Email-Adresse</title>
+        <title>Word light | Account bestätigen</title>
         <meta charset="utf-8">
         <!-- TODO: add viewport meta -->
         <!-- TODO: add flexible height -->
         <style>
-            body {
+            html {
                 color: black;
-                font-family: Arial, sans-serif;
+                font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+            }
+
+            body {
                 margin: 0;
                 min-height: 100vh;
                 position: relative;
                 text-align: center;
             }
+
+            a {
+                color: black;
+                text-decoration: none;
+            }
             
             .navBar {
                 align-items: center;
                 background-color: bisque;
-                color: black;
                 display: flex;
                 padding: 10px 30px;
                 text-align: left;
-                text-decoration: none;
+            }
+
+            .navLink {
+                align-items: center;
+                display: flex;
             }
 
             #navHeading {
@@ -47,9 +58,10 @@
 
             #confirmButton:hover {
                 background-color: rgba(0, 0, 0, 0.623);
+                cursor: pointer;
             }
 
-            /* .footer {
+            footer {
                 align-items: center;
                 background-color: black;
                 bottom: 0;
@@ -60,42 +72,44 @@
                 margin-top: 20px;
                 position: absolute;
                 width: 100vi;
-            } */
+            }
         </style>
     </head>
     
     <body>
-        <a class="navBar" href="%s">
-            <img id="favicon" src="cid:favicon" alt="favicon" height="60px" width="65px"/>
-            <span id="navHeading">DocumentBuilder</span>
-        </a>
+        <nav class="navBar">
+            <a href="%s" class="navLink">
+                <img id="favicon" src="cid:favicon" alt="favicon" height="40" width="40"/>
+                <span id="navHeading">Word light</span>
+            </a>
+        </nav>
 
-        <p>
-            Vielen Dank, dass Sie sich für DocumentBuilder entschieden haben!
-        </p><br>
+        <p>Vielen Dank, dass Sie sich für Word light entschieden haben!</p>
 
-        <p>
-            Bitte bestätigen Sie Ihre Email-Adresse, indem Sie auf den folgenden Button klicken:
-        </p>
-        <form class="confirmationForm" action="%s" target="_blank">
+        <br>
+
+        <p>Bitte bestätigen Sie Ihre Email-Adresse, indem Sie auf den folgenden Button klicken:</p>
+
+        <!-- TODO: make this a post request (?) -->
+        <a class="confirmationForm" href="%s" target="_blank">
             <button id="confirmButton" type="submit">
                 Email-Adresse bestätigen
-            </button><br><br>
+            </button>
+        </a>
             
-            <p>
-                Sie haben keinen Account für DocumentBuilder erstellt? Dann können Sie diese Email ohne Weiteres ignorieren.
-            </p>
-        </form>
+            <br><br>
+            
+            <p>Sie haben keinen Account für Word light erstellt? Dann können Sie diese Email ohne Weiteres ignorieren.</p>
 
         <p>
             Mit besten Grüßen,<br>
-            Ihr DocumentBuilder Team
+            Ihr Word light Team
         </p>
 
         <div style="height: 100px;"></div>
-    
-        <!-- <div class="footer">
-            &copy;DocumentBuilder
-        </div> -->
     </body>
+    
+    <footer>
+        Word light
+    </footer>
 </html>

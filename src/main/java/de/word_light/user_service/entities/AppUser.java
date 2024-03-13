@@ -12,6 +12,7 @@ import de.word_light.user_service.abstracts.AbstractEntity;
 import de.word_light.user_service.enums.AppUserRole;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -41,6 +42,7 @@ public class AppUser extends AbstractEntity implements UserDetails {
     @NotNull(message = "'email' cannot be null")
     @Schema(example = "max.mustermann@domain.com")
     @EqualsAndHashCode.Include
+    @Column(unique = true, nullable = false)
     private String email;
 
     @NotNull(message = "'password' cannot be null")
@@ -51,13 +53,15 @@ public class AppUser extends AbstractEntity implements UserDetails {
     @Enumerated(EnumType.STRING)
     private AppUserRole role;
 
-        private boolean isAccountNonExpired;
+    @Schema(hidden = true)
+    private boolean isAccountNonExpired;
 
-        private boolean isAccountNonLocked;
+    private boolean isAccountNonLocked;
 
-        private boolean isCredentialsNonExpired;
+    private boolean isCredentialsNonExpired;
 
-        private boolean isEnabled;
+    @Schema(example = "false")
+    private boolean isEnabled;
 
 
     /**

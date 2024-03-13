@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import de.word_light.user_service.abstracts.AbstractEntity;
 import jakarta.persistence.Entity;
+import jakarta.persistence.OneToOne;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -23,6 +24,11 @@ public class ConfirmationToken extends AbstractEntity {
     @EqualsAndHashCode.Include
     private String token;
 
+    // TODO: test orphanremoval
+    @OneToOne(orphanRemoval = true)
+    @EqualsAndHashCode.Include
+    private AppUser appUser;
+
     private LocalDateTime confirmedAt;
 
     @NotNull(message = "'expiresAt' cannot be null")
@@ -32,19 +38,18 @@ public class ConfirmationToken extends AbstractEntity {
     /**
      * Sets expiration time to 15 minutes.
      */
-    public ConfirmationToken(String token) {
+    public ConfirmationToken(String token, AppUser appUser) {
 
         this.token = token;
+        this.appUser = appUser;
         this.expiresAt = LocalDateTime.now().plusMinutes(15);
     }
 
 
-    /**
-     * @param expiresAt time of expiration.
-     */
-    public ConfirmationToken(String token, LocalDateTime expiresAt) {
+    public ConfirmationToken(String token, AppUser appUser, LocalDateTime expiresAt) {
         
         this.token = token;
+        this.appUser = appUser;
         this.expiresAt = expiresAt;
     }
 

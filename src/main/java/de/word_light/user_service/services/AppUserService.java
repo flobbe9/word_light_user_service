@@ -32,8 +32,14 @@ import jakarta.validation.constraints.NotNull;
  */
 @Service
 @Validated
-// TODO: add docker-compose
 // TODO: add user service to docker-compose all
+// TODO: register endpoint takes way too long
+// TODO: 
+    // register
+    // confirm
+    // login
+    // logout
+    // getcsrf but protected this time
 public class AppUserService extends AbstractService<AppUser, AppUserRepository> implements UserDetailsService {
 
     public static final String VALIDATION_NOT_NULL = "'appUser' cannot be null.";
@@ -124,12 +130,13 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
      * @param email of appUser
      * @param token to confirm
      */
-    public void confirmAccount(@NotBlank(message = VALIDATION_EMAIL_NOT_BLANK) String email, 
+    public void confirmAccount(
+        // @NotBlank(message = VALIDATION_EMAIL_NOT_BLANK) String email, 
                                @NotBlank(message = ConfirmationTokenService.VALIDATION_NOT_NULL) String token) {
 
-        this.confirmationTokenService.confirmToken(token);
+        AppUser appUser = this.confirmationTokenService.confirmToken(token);
 
-        enable(email);
+        enable(appUser.getEmail());
     }
     
 
@@ -154,12 +161,12 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
     private void sendAccountVerificationMail(AppUser appUser) {
 
         // create confirmation token
-        ConfirmationToken confirmationToken = this.confirmationTokenService.saveNew();
+        ConfirmationToken confirmationToken = this.confirmationTokenService.saveNew(appUser);
         
         // send mail
         mailService.sendMail(appUser.getEmail(), 
-                            "DocumentBuilder Account bestätigen", 
-                            createVerificationMail(appUser, confirmationToken), 
+                            "Word light Account bestätigen", 
+                            createVerificationMail(confirmationToken), 
                             true, 
                             Map.of("favicon", this.favicon));
     }
@@ -168,18 +175,15 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
     /**
      * Convert verificationMail.html template to String and fill placeholders
      * 
-     * @param appUser to send the mail to
      * @param confirmationToken to append to confirmation link
-     * @return formatted String with html template
+     * @return formatted String of html template
      */
-    private String createVerificationMail(AppUser appUser, ConfirmationToken confirmationToken) {
+    private String createVerificationMail(ConfirmationToken confirmationToken) {
 
         // read to string
         String htmlText = Utils.fileToString(this.verificationMail);
 
-        String confirmationLink = this.frontendBaseUrl + "/confirmAccount?" + 
-                                  "email=" + appUser.getEmail() + "&" +
-                                  "token=" + confirmationToken.getToken();
+        String confirmationLink = this.frontendBaseUrl + "/confirmAccount?token=" + confirmationToken.getToken();
 
         // replace placeholders
         String text = String.format(htmlText, this.frontendBaseUrl, confirmationLink);
