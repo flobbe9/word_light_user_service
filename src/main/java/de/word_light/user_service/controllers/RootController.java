@@ -16,7 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  */
 @RequestMapping("/")
 @RestController
-@Tag(name = "Root endpoints")
+@Tag(name = "Root")
 public class RootController {
     
     @GetMapping("/version")

@@ -48,5 +48,5 @@ spring:
         host: localhost
         port: 1025
         sender: 
-            name: DocumentBuilder Team
-            email: documentBuilder.mailing@outlook.de
+            name: ${SPRING_MAIL_SENDER_NAME}
+            email: ${SPRING_MAIL_SENDER_EMAIL}

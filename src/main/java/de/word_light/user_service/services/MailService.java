@@ -3,7 +3,6 @@ package de.word_light.user_service.services;
 import java.io.File;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
@@ -12,7 +11,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import de.word_light.user_service.exception.ApiException;
-
+import de.word_light.user_service.utils.Utils;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.validation.constraints.NotBlank;
@@ -49,7 +48,7 @@ public class MailService {
         try {
             MimeMessage mimeMessage = createMimeMessage(to, subject, text, html, inlines, attachments);
 
-            javaMailSender.send(mimeMessage);
+            Utils.runInsideThread(() -> javaMailSender.send(mimeMessage));
 
         } catch (MailException | MessagingException e) {
             throw new ApiException("Failed to send mail.", e);

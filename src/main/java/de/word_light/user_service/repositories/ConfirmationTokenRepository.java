@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Repository;
 
+import de.word_light.user_service.entities.AppUser;
 import de.word_light.user_service.entities.ConfirmationToken;
 
 
@@ -13,5 +14,4 @@ public interface ConfirmationTokenRepository extends Dao<ConfirmationToken> {
     boolean existsByToken(String token);
 
     Optional<ConfirmationToken> findByToken(String token);
-    
 }

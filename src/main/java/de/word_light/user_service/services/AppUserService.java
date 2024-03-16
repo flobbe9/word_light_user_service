@@ -1,15 +1,18 @@
 package de.word_light.user_service.services;
 
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.NOT_ACCEPTABLE;
+
 import java.io.File;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.validation.annotation.Validated;
 
 import de.word_light.user_service.abstracts.AbstractService;
 import de.word_light.user_service.entities.AppUser;
@@ -19,9 +22,6 @@ import de.word_light.user_service.repositories.AppUserRepository;
 import de.word_light.user_service.utils.Utils;
 
 import jakarta.annotation.Resource;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 
 /**
@@ -31,9 +31,8 @@ import jakarta.validation.constraints.NotNull;
  * @see AppUserRepository
  */
 @Service
-@Validated
 // TODO: add user service to docker-compose all
-// TODO: register endpoint takes way too long
+// TODO: tests
 // TODO: 
     // register
     // confirm
@@ -41,10 +40,6 @@ import jakarta.validation.constraints.NotNull;
     // logout
     // getcsrf but protected this time
 public class AppUserService extends AbstractService<AppUser, AppUserRepository> implements UserDetailsService {
-
-    public static final String VALIDATION_NOT_NULL = "'appUser' cannot be null.";
-    public static final String VALIDATION_EMAIL_NOT_BLANK = "'email' cannot be blank or null.";
-
 
     @Autowired
     private AppUserRepository repository;
@@ -77,30 +72,39 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
      * @param appUser to register
      * @return registered appUser
      */
-    // TODO: consider sending email first, sothat the second try will not throw duplicate
-    public AppUser register(@NotNull(message = VALIDATION_NOT_NULL) @Valid AppUser appUser) {
+    public AppUser register(AppUser appUser) {
+
+        if (appUser == null)
+            throw new ApiException("Failed to register user. 'appUser' is null.");
 
         validatePassword(appUser.getPassword());
-
+        validateEmail(appUser.getEmail());
+            
         saveNew(appUser);
 
-        sendAccountVerificationMail(appUser);
+        sendConfirmationMail(appUser);
 
         return appUser;
     }
     
     
     /**
-     * Call {@code save} method of jpa repo on existing {@link AppUser} or throw if does not exist.
+     * Call {@code save} method of jpa repo on existing {@link AppUser} or throw if does not exist. <p>
+     * 
+     * Don't allow to update {@code email} since it's the only identifier for a user.
      * 
      * @param appUser to update
-     * @param newPassword true if password has been changed
      * @return updated appUser
-     * @throws ApiException if user does not exist
+     * @throws ApiException if user does not exist or email has changed
      */
-    public AppUser update(@NotNull(message = VALIDATION_NOT_NULL) @Valid AppUser appUser) {
+    // NOTE: don't use this method directly, check that logged in user is same as given user first
+    public AppUser update(AppUser appUser) {
 
-        AppUser oldAppUser = getById(appUser.getId());
+        if (appUser == null)
+            throw new ApiException("Failed to update user. 'appUser' is null.");
+
+        AppUser oldAppUser = loadUserByUsername(appUser.getEmail());
+        appUser.setId(oldAppUser.getId());
 
         // case: changed password
         if (!oldAppUser.getPassword().equals(appUser.getPassword())) {
@@ -108,7 +112,7 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
             validatePassword(password);
             appUser.setPassword(this.passwordEncoder.encode(password));
         }
-                    
+
         return save(appUser);
     }
 
@@ -116,11 +120,12 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
     @Override
     public AppUser loadUserByUsername(String email) {
 
-        if (email == null || email.isBlank())
-            throw new ApiException("Failed to load user. " + VALIDATION_EMAIL_NOT_BLANK);
+        if (StringUtils.isBlank(email))
+            throw new ApiException("Failed to load user. 'email' is blank or null.");
 
-        return repository.findByEmail(email)
-                         .orElseThrow(() -> new ApiException("Failed to load user. Username '" + email + "' does not exist."));
+        return this.repository.findByEmail(email)
+                              .orElseThrow(() -> 
+                                new ApiException(NOT_ACCEPTABLE, "Failed to load user. 'email' does not exist."));
     }
 
 
@@ -130,9 +135,10 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
      * @param email of appUser
      * @param token to confirm
      */
-    public void confirmAccount(
-        // @NotBlank(message = VALIDATION_EMAIL_NOT_BLANK) String email, 
-                               @NotBlank(message = ConfirmationTokenService.VALIDATION_NOT_NULL) String token) {
+    public void confirmAccount(String token) {
+
+        if (StringUtils.isBlank(token))
+            throw new ApiException("Failed to confirm account. 'token' is blank or null.");
 
         AppUser appUser = this.confirmationTokenService.confirmToken(token);
 
@@ -144,11 +150,61 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
      * Validate given password and throw {@link ApiException} if invalid. Regex wont work with encrypted passwords.
      * 
      * @param password to check
+     * @throws ApiException if given {@code password} is invalid
      */
-    public void validatePassword(@NotNull(message = VALIDATION_NOT_NULL) String password) {
+    public void validatePassword(String password) {
 
         if (!Utils.isPasswordValid(password))
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Failed to save user. 'password' pattern invalid.");
+            throw new ApiException(BAD_REQUEST, "'password' pattern invalid.");
+    }
+
+    
+    /**
+     * Validate given email and throw {@link ApiException} if invalid. Regex wont work with encrypted emails.
+     * 
+     * @param email to check
+     * @throws ApiException if given {@code email} is invalid
+     */
+    public void validateEmail(String email) {
+
+        if (!Utils.isEmailValid(email))
+            throw new ApiException(BAD_REQUEST, "'email' pattern invalid.");
+    }
+
+
+    /**
+     * Find {@code appUser} related to given {@code token}, create new {@code confirmationToken} and resend confirmation mail.
+     * 
+     * @param token old token to find appUser by
+     */
+    public void resendConfirmationMailByToken(String token) {
+
+        if (StringUtils.isBlank(token))
+            throw new ApiException("Failed to resend confirmation mail. 'token' is blank or null.");
+
+        ConfirmationToken confirmationToken = this.confirmationTokenService.findByToken(token);
+        AppUser appUser = confirmationToken.getAppUser();
+        
+        // should not happen
+        if (appUser == null)
+            throw new ApiException("Failed to resend confirmation mail. 'appUser' is null (should not happen).");
+
+        sendConfirmationMail(appUser);
+    }
+
+    
+    /**
+     * Create new {@code confirmationToken} and resend confirmation mail.
+     * 
+     * @param email of appUser to send the mail to
+     */
+    public void resendConfirmationMailByEmail(String email) {
+
+        if (StringUtils.isBlank(email))
+            throw new ApiException("Failed to resend confirmation mail. 'email' is blank or null.");
+
+        AppUser appUser = loadUserByUsername(email);
+        sendConfirmationMail(appUser);
     }
 
     
@@ -157,8 +213,13 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
      * given {@link AppUser}.
      * 
      * @param appUser to send the mail to
+     * @throws ApiException if given {@code appUser} is enabled already
      */
-    private void sendAccountVerificationMail(AppUser appUser) {
+    private void sendConfirmationMail(AppUser appUser) {
+
+        // case: appUser confirmed already
+        if (appUser.isEnabled())
+            throw new ApiException(HttpStatus.IM_USED, "Did not resend confirmation mail. Account is already confirmed.");
 
         // create confirmation token
         ConfirmationToken confirmationToken = this.confirmationTokenService.saveNew(appUser);
@@ -219,7 +280,7 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
 
         // case: email already taken
         if (this.repository.existsByEmail(appUser.getEmail()))
-            throw new ApiException("Failed to save user. User with this email does already exist.");
+            throw new ApiException(HttpStatus.CONFLICT, "Failed to save user. User with this email does already exist.");
            
         appUser.setPassword(passwordEncoder.encode(appUser.getPassword()));
 

@@ -3,7 +3,9 @@ package de.word_light.user_service.entities;
 import java.time.LocalDateTime;
 
 import de.word_light.user_service.abstracts.AbstractEntity;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -24,8 +26,7 @@ public class ConfirmationToken extends AbstractEntity {
     @EqualsAndHashCode.Include
     private String token;
 
-    // TODO: test orphanremoval
-    @OneToOne(orphanRemoval = true)
+    @ManyToOne
     @EqualsAndHashCode.Include
     private AppUser appUser;
 

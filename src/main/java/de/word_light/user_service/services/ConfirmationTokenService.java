@@ -1,11 +1,15 @@
 package de.word_light.user_service.services;
 
+import static org.springframework.http.HttpStatus.CONFLICT;
+import static org.springframework.http.HttpStatus.NOT_ACCEPTABLE;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.validation.annotation.Validated;
 
 import de.word_light.user_service.abstracts.AbstractService;
 import de.word_light.user_service.entities.AppUser;
@@ -13,20 +17,14 @@ import de.word_light.user_service.entities.ConfirmationToken;
 import de.word_light.user_service.exception.ApiException;
 import de.word_light.user_service.repositories.ConfirmationTokenRepository;
 
-import jakarta.validation.constraints.NotBlank;
-
 
 @Service
-@Validated
-// TODO: add cron job deleting old tokens every day or so
+// TODO: add cron job deleting old tokens every week or so
 // TODO: adjust tests
 public class ConfirmationTokenService extends AbstractService<ConfirmationToken, ConfirmationTokenRepository> {
 
     private static final int CREATE_UNIQUE_UUID_TRIES = 1000;
     
-    public static final String VALIDATION_NOT_NULL = "'confirmationToken' cannot be null.";
-    public static final String VALIDATION_TOKEN_NOT_BLANK = "'token' cannot be blank or null.";
-
     @Autowired
     private ConfirmationTokenRepository repository;
 
@@ -39,9 +37,12 @@ public class ConfirmationTokenService extends AbstractService<ConfirmationToken,
      */
     public ConfirmationToken saveNew(AppUser appUser) {
 
+        if (appUser == null)
+            throw new ApiException("Failed to save confirmation token. 'appUser' is null.");
+
         String token = createNonExistingToken();
 
-        return save(new ConfirmationToken(token, appUser));
+        return super.save(new ConfirmationToken(token, appUser));
     }
     
 
@@ -56,15 +57,18 @@ public class ConfirmationTokenService extends AbstractService<ConfirmationToken,
      * @param token to confirm
      * @return the appUser related to the token
      */
-    public AppUser confirmToken(@NotBlank(message = VALIDATION_TOKEN_NOT_BLANK) String token) {
+    public AppUser confirmToken(String token) {
+
+        if (StringUtils.isBlank(token))
+            throw new ApiException("Failed to confirm token. 'token' is blank or null.");
 
         ConfirmationToken confirmationToken = getByToken(token);
 
         if (confirmationToken.isConfirmed())
-            throw new ApiException("Failed to confirm token. 'confirmationToken' is confirmed already.");
+            throw new ApiException(HttpStatus.IM_USED, "Failed to confirm token. 'token' is confirmed already.");
 
         if (confirmationToken.isExpired())
-            throw new ApiException("Failed to confirm token. 'confirmationToken' is expired.");
+            throw new ApiException(CONFLICT, "Failed to confirm token. 'token' is expired.");
 
         // set confirmed
         confirmationToken.setConfirmedAt(LocalDateTime.now());
@@ -76,13 +80,22 @@ public class ConfirmationTokenService extends AbstractService<ConfirmationToken,
     }
 
 
+    public ConfirmationToken findByToken(String token) {
+
+        return this.repository.findByToken(token)
+                              .orElseThrow(() -> 
+                                new ApiException(NOT_ACCEPTABLE, "Failed to find ConfirmationToken with 'token' " + token));
+    }
+
+
     private ConfirmationToken getByToken(String token) {
 
         if (token == null)
             throw new ApiException("Failed to confirm token. 'token' cannot be null.");
 
         return this.repository.findByToken(token)
-                              .orElseThrow(() -> new ApiException("Failed to find confirmation token with 'token': " + token + "."));
+                              .orElseThrow(() -> 
+                                new ApiException(NOT_ACCEPTABLE, "Failed to find confirmation token with 'token': " + token + "."));
     }
 
 
@@ -104,7 +117,7 @@ public class ConfirmationTokenService extends AbstractService<ConfirmationToken,
                 count++;
         }
 
-        throw new ApiException("Failed to create unique confirmation token. Reached maximum tries.");
+        throw new ApiException(CONFLICT, "Failed to create unique confirmation token. Reached maximum tries.");
     }
 
 

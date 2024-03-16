@@ -3,6 +3,7 @@ package de.word_light.user_service.controllers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,6 +38,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequestMapping("${MAPPING}")
 @Tag(name = "AppUser logic")
 @Validated
+// TODO: tests
 public class AppUserController {
 
     @Autowired
@@ -47,8 +49,6 @@ public class AppUserController {
     @Operation(summary = "Create new appUser and send verification mail", description = "Only email, password and role are required")
     public ResponseEntity<ApiExceptionFormat> register(@RequestBody @NotNull(message = "'appUser' cannot be null") @Valid AppUser appUser) {
 
-        this.appUserService.validatePassword(appUser.getPassword());
-
         // save as disabled user
         this.appUserService.register(new AppUser(appUser.getEmail(), appUser.getPassword(), appUser.getRole()));
 
@@ -57,7 +57,8 @@ public class AppUserController {
 
 
     @PutMapping("/update")
-    @Operation(summary = "Update existing appUser.")
+    @Secured("ROLE_ADMIN")
+    @Operation(summary = "Update existing appUser.", description = "ROLE_ADMIN")
     public ResponseEntity<ApiExceptionFormat> update(@RequestBody @NotNull(message = "'appUser' cannot be null") @Valid AppUser appUser) {
 
         this.appUserService.update(appUser);
@@ -66,14 +67,9 @@ public class AppUserController {
     }
 
 
-    // TODO: don't retrieve mail
-    // TODO: change get to post
-    // TODO: adjust tests
     @PostMapping("/confirmAccount")
     @Operation(summary = "Confirm existing account of appUser.")
-    public ResponseEntity<ApiExceptionFormat> confirmAccount(
-        // @RequestParam @NotBlank(message = "'email' cannot be blank or null") @Parameter(example = "max.mustermann@domain.com") String email, 
-                                                             @RequestParam @NotBlank(message = "'token' cannot be blank or null") String token) {
+    public ResponseEntity<ApiExceptionFormat> confirmAccount(@RequestParam @NotBlank(message = "'token' cannot be blank or null") String token) {
 
         this.appUserService.confirmAccount(token);
 
@@ -81,10 +77,33 @@ public class AppUserController {
     }
 
 
-    @GetMapping("/getByEmail")
-    @Operation(summary = "Find appUser by email.")
-    public AppUser getByEmail(@RequestParam @NotBlank(message = "'email' cannot be blank") @Parameter(example = "max.mustermann@domain.com") String email) {
+    @PostMapping("/resendConfirmationMailByToken")
+    @Operation(summary = "Resend mail to confirm account of given appUser. Use confirmation token as identifier.")
+    public ResponseEntity<ApiExceptionFormat> resendConfirmationMailByToken(@RequestParam @NotBlank(message = "'token' cannot be blank or null") String token) {
 
-        return this.appUserService.loadUserByUsername(email);
+        this.appUserService.resendConfirmationMailByToken(token);
+
+        return ResponseEntity.ok().body(ApiExceptionHandler.returnPrettySuccess(HttpStatus.OK));
+    }
+
+
+    @PostMapping("/resendConfirmationMailByEmail")
+    @Operation(summary = "Resend mail to confirm account of given appUser. Use user email as identifier.")
+    public ResponseEntity<ApiExceptionFormat> resendConfirmationMailByEmail(@RequestParam @NotBlank(message = "'email' cannot be blank or null") @Parameter(example = "max.mustermann@domain.com") String email) {
+
+        this.appUserService.resendConfirmationMailByEmail(email);
+
+        return ResponseEntity.ok().body(ApiExceptionHandler.returnPrettySuccess(HttpStatus.OK));
+    }
+
+
+    @GetMapping("/getByEmail")
+    @Secured("ROLE_ADMIN")
+    @Operation(summary = "Find appUser by email.", description = "ROLE_ADMIN")
+    public ResponseEntity<AppUser> getByEmail(@RequestParam @NotBlank(message = "'email' cannot be blank") @Parameter(example = "max.mustermann@domain.com") String email) {
+
+        AppUser appUser = this.appUserService.loadUserByUsername(email);
+
+        return ResponseEntity.ok().body(appUser);
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import de.word_light.user_service.UserServiceApplication;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 
 /**
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.Operation;
  * @since 0.0.1
  */
 @Controller
+@Tag(name = "Thymeleaf")
 public class ThymeleafController {
 
     @Value("${WEBSITE_NAME}")

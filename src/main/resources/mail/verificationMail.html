@@ -3,8 +3,9 @@
     <head>
         <title>Word light | Account bestätigen</title>
         <meta charset="utf-8">
-        <!-- TODO: add viewport meta -->
-        <!-- TODO: add flexible height -->
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+
+        <!-- NOTE: don't nest styles since html parser can't work with that -->
         <style>
             html {
                 color: black;
@@ -90,7 +91,6 @@
 
         <p>Bitte bestätigen Sie Ihre Email-Adresse, indem Sie auf den folgenden Button klicken:</p>
 
-        <!-- TODO: make this a post request (?) -->
         <a class="confirmationForm" href="%s" target="_blank">
             <button id="confirmButton" type="submit">
                 Email-Adresse bestätigen

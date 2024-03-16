@@ -1,5 +1,7 @@
 package de.word_light.user_service.utils;
 
+import static org.springframework.http.HttpStatus.NOT_ACCEPTABLE;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -15,7 +17,11 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.Nullable;
@@ -48,6 +54,29 @@ public class Utils {
 
     /** list of file names that should never be deleted during clean up processes */
     public static final Set<String> KEEP_FILES = Set.of(".gitkeep");
+
+    /** 
+     * At least <p>
+     * - 8 characters, max 30,<p>
+     * - one uppercase letter, <p>
+     * - one lowercase letter,  <p>
+     * - one number and <p>
+     * - one of given special characters.
+     */
+    public static final String PASSWORD_REGEX = "^.*(?=.{8,})(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[.,;_!#$%&*+=?`\"'\\/\\{|}()~^-]).*$";
+    public static final String EMAIL_REGEX = "^[\\w\\-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$";
+
+    @Bean
+    File verificationMail() {
+
+        return getFile(MAIL_FOLDER + VERIFICATION_MAIL_FILE_NAME);
+    }
+
+    @Bean
+    File favicon() {
+
+        return getFile(IMG_FOLDER + FAVICON_FILE_NAME);
+    }
 
 
     /**
@@ -137,23 +166,31 @@ public class Utils {
     }
 
 
-    /** 
-     * At least <p>
-     * - eight characters, <p>
-     * - one uppercase letter, <p>
-     * - one lowercase letter,  <p>
-     * - one number and <p>
-     * - one of given special characters. <p>
-     * - maximum 30 characters, 
+    /**
+     * @param password to validate
+     * @return true matches regex and not null, else false
+     * @see {@link #PASSWORD_REGEX}
      */
     public static boolean isPasswordValid(String password) {
 
-        if (password == null)
-            throw new ApiException("Failed to validate password. 'password' cannot be null");
+        if (StringUtils.isBlank(password))
+            return false;
         
-        String regex = "^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[,.;_!#$%&’*+/=?`{|}~^-]).{8,30}$";
+        return password.matches(PASSWORD_REGEX);
+    }
 
-        return password.matches(regex);
+
+    /**
+     * @param email to validate
+     * @return true matches regex and not null, else false
+     * @see {@link #EMAIL_REGEX}
+     */
+    public static boolean isEmailValid(String email) {
+
+        if (StringUtils.isBlank(email))
+            return false;
+
+        return email.matches(EMAIL_REGEX);
     }
 
 
@@ -310,7 +347,7 @@ public class Utils {
 
         } catch (JsonProcessingException e) {
             e.printStackTrace();
-            throw new ApiException("Failed to convert object to json String.", e);
+            throw new ApiException(NOT_ACCEPTABLE, "Failed to convert object to json String.", e);
         }
     }
 
@@ -342,36 +379,54 @@ public class Utils {
     }
 
 
-    @Bean
-    File verificationMail() {
-
-        return getFile(MAIL_FOLDER + VERIFICATION_MAIL_FILE_NAME);
-    }
-
-
-    @Bean
-    File favicon() {
-
-        return getFile(IMG_FOLDER + FAVICON_FILE_NAME);
-    }
-
-
     /**
      * Retrieve file or throw {@code ApiException}.
      * 
      * @param filePath of file
      * @return file or null if filePath is null
      */
-    private File getFile(String filePath) {
+    public static File getFile(String filePath) {
 
-        if (filePath == null)
-            return null;
+        if (StringUtils.isBlank(filePath))
+            throw new ApiException("Failed to get file. 'filePath' is null or blank.");
 
-        File verificationMail = new File(filePath);
+        File file = new File(filePath);
 
-        if (!verificationMail.exists())
-            throw new ApiException("Failed to load resource: " + filePath);
+        if (!file.exists())
+            throw new ApiException(NOT_ACCEPTABLE, "Failed to get file: " + filePath);
 
-        return verificationMail;
+        return file;
+    }
+
+
+    /**
+     * Execute given {@code runnable} asynchronously inside a thread.
+     * 
+     * @param runnable lambda function without parameter or return value
+     */
+    public static void runInsideThread(Runnable runnable) {
+
+        if (runnable == null)
+            throw new ApiException("Failed to run task inside thread. 'runnable' is null.");
+
+        ExecutorService executorService = Executors.newFixedThreadPool(1);
+        executorService.submit(runnable);
+    }
+
+
+    /**
+     * Execute given {@code callable} asynchronously inside a thread.
+     * 
+     * @param T return type of {@code callable}
+     * @param callable lambda function without parameter
+     * 
+     */
+    public static <T> void runInsideThread(Callable<T> callable) {
+
+        if (callable == null)
+            throw new ApiException("Failed to run task inside thread. 'callable' is null.");
+
+        ExecutorService executorService = Executors.newFixedThreadPool(1);
+        executorService.submit(callable);
     }
 }

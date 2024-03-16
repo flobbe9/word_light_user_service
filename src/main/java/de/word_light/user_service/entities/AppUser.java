@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import de.word_light.user_service.abstracts.AbstractEntity;
 import de.word_light.user_service.enums.AppUserRole;
-
+import de.word_light.user_service.utils.Utils;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -38,13 +38,14 @@ import lombok.Setter;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class AppUser extends AbstractEntity implements UserDetails {
 
-    @Pattern(regexp = "^[\\w!#$%&’*+/=?`{|}~^-]+(?:\\.[\\w!#$%&’*+/=?`{|}~^-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,6}$", message = "'email' pattern invalid")
+    @Pattern(regexp = Utils.EMAIL_REGEX, message = "'email' pattern invalid")
     @NotNull(message = "'email' cannot be null")
     @Schema(example = "max.mustermann@domain.com")
     @EqualsAndHashCode.Include
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, updatable = false)
     private String email;
 
+    @Pattern(regexp = Utils.PASSWORD_REGEX, message = "'password' pattern invalid. pattern: " + Utils.PASSWORD_REGEX)
     @NotNull(message = "'password' cannot be null")
     @Schema(example = "Abc123,.")
     private String password;
@@ -53,14 +54,12 @@ public class AppUser extends AbstractEntity implements UserDetails {
     @Enumerated(EnumType.STRING)
     private AppUserRole role;
 
-    @Schema(hidden = true)
     private boolean isAccountNonExpired;
 
     private boolean isAccountNonLocked;
 
     private boolean isCredentialsNonExpired;
 
-    @Schema(example = "false")
     private boolean isEnabled;
 
 

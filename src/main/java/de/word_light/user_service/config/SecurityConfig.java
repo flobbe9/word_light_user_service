@@ -1,16 +1,18 @@
 package de.word_light.user_service.config;
 
+import static de.word_light.user_service.utils.Utils.prependSlash;
+
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -26,15 +28,16 @@ import lombok.extern.log4j.Log4j2;
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @Log4j2
 public class SecurityConfig {
 
     @Value("${FRONTEND_BASE_URL}")
     private String FRONTEND_BASE_URL;
-
+    
     @Value("${MAPPING}")
     private String MAPPING;
-
+    
     @Value("${ENV}")
     private String ENV;
 
@@ -46,19 +49,44 @@ public class SecurityConfig {
     }
 
     
+    /**
+     * NOTE: RequestMatchers dont override each other. That's why order of calls matters.
+     * @param http
+     * @return
+     * @throws Exception
+     */
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         
-        // enable csrf in prod onlye
-        if (!this.ENV.equalsIgnoreCase("prod"))
+        // allow anything
+        if (!this.ENV.equalsIgnoreCase("prod")) {
             http.csrf(csrf -> csrf.disable());
-        
-        // routes
-        http.authorizeHttpRequests(request -> request
+
+            http.authorizeHttpRequests(request -> request
                 .anyRequest()
-                .permitAll())
-            .cors(cors -> cors
-                .configurationSource(corsConfig()));
+                    .permitAll());
+
+        // enable csrf and restrict url access
+        } else {
+            http.csrf(csrf -> csrf
+                // allow critical method types for paths prior to login
+                .ignoringRequestMatchers(getRoutesPriorToLogin()));   
+
+            http.authorizeHttpRequests(request -> request
+                // permitt some MAPPING endpoints
+                .requestMatchers(getRoutesPriorToLogin())
+                    .permitAll()
+                // restrict all other MAPPING endpoints
+                .requestMatchers(prependSlash(MAPPING) + "/**")
+                    .authenticated()
+                // allow all non MAPPING endpoints
+                .anyRequest()
+                    .permitAll());
+        }
+
+        // allow frontend
+        http.cors(cors -> cors
+            .configurationSource(corsConfig()));
 
         return http.build();
     }
@@ -88,5 +116,19 @@ public class SecurityConfig {
     PasswordEncoder passwordEncoder() {
 
         return new BCryptPasswordEncoder(10);
+    }
+
+
+    /**
+     * @return array of paths that a user should be able to access without having a valid session, e.g. "/api/userService/register"
+     */
+    private String[] getRoutesPriorToLogin() {
+
+        return new String[] {
+            prependSlash(MAPPING) + "/register",    
+            prependSlash(MAPPING) + "/confirmAccount",
+            prependSlash(MAPPING) + "/resendConfirmationMailByToken",
+            prependSlash(MAPPING) + "/resendConfirmationMailByEmail"
+        };
     }
 }
