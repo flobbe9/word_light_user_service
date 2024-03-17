@@ -38,14 +38,14 @@ import lombok.Setter;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class AppUser extends AbstractEntity implements UserDetails {
 
-    @Pattern(regexp = Utils.EMAIL_REGEX, message = "'email' pattern invalid")
+    @Pattern(regexp = Utils.EMAIL_REGEX, message = "'email' does not match pattern")
     @NotNull(message = "'email' cannot be null")
     @Schema(example = "max.mustermann@domain.com")
     @EqualsAndHashCode.Include
     @Column(unique = true, nullable = false, updatable = false)
     private String email;
 
-    @Pattern(regexp = Utils.PASSWORD_REGEX, message = "'password' pattern invalid. pattern: " + Utils.PASSWORD_REGEX)
+    @Pattern(regexp = Utils.PASSWORD_REGEX, message = "'password' does not match pattern")
     @NotNull(message = "'password' cannot be null")
     @Schema(example = "Abc123,.")
     private String password;

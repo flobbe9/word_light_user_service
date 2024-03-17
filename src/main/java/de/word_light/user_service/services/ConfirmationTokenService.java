@@ -19,8 +19,6 @@ import de.word_light.user_service.repositories.ConfirmationTokenRepository;
 
 
 @Service
-// TODO: add cron job deleting old tokens every week or so
-// TODO: adjust tests
 public class ConfirmationTokenService extends AbstractService<ConfirmationToken, ConfirmationTokenRepository> {
 
     private static final int CREATE_UNIQUE_UUID_TRIES = 1000;
@@ -80,22 +78,11 @@ public class ConfirmationTokenService extends AbstractService<ConfirmationToken,
     }
 
 
-    public ConfirmationToken findByToken(String token) {
+    public ConfirmationToken getByToken(String token) {
 
         return this.repository.findByToken(token)
                               .orElseThrow(() -> 
                                 new ApiException(NOT_ACCEPTABLE, "Failed to find ConfirmationToken with 'token' " + token));
-    }
-
-
-    private ConfirmationToken getByToken(String token) {
-
-        if (token == null)
-            throw new ApiException("Failed to confirm token. 'token' cannot be null.");
-
-        return this.repository.findByToken(token)
-                              .orElseThrow(() -> 
-                                new ApiException(NOT_ACCEPTABLE, "Failed to find confirmation token with 'token': " + token + "."));
     }
 
 

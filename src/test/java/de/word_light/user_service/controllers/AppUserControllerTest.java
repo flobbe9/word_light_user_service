@@ -12,10 +12,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -35,10 +40,13 @@ import de.word_light.user_service.enums.AppUserRole;
 import de.word_light.user_service.exception.ApiException;
 import de.word_light.user_service.exception.ApiExceptionFormat;
 import de.word_light.user_service.services.AppUserService;
+import de.word_light.user_service.utils.Utils;
 
 
-@WebMvcTest(AppUserController.class)
+@SpringBootTest
+@TestInstance(Lifecycle.PER_CLASS)
 @AutoConfigureMockMvc(addFilters = false)
+@TestMethodOrder(OrderAnnotation.class)
 public class AppUserControllerTest {
 
     @MockBean
@@ -47,7 +55,10 @@ public class AppUserControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private String requestMapping = "/${MAPPING}";
+    @Value("${MAPPING}")
+    private String MAPPING;
+
+    private String requestMapping;
 
     private AppUser appUser;
     private String email = "max.mustermann@domain.com";
@@ -60,12 +71,16 @@ public class AppUserControllerTest {
     @BeforeEach
     void setup() {
 
+        this.requestMapping = Utils.prependSlash(MAPPING);
         this.appUser = new AppUser(this.email, this.password, this.role);
     }
 
 
+// ----- register()
     @Test
     void register_shouldBeStatus200() throws Exception {
+
+        System.out.println(this.requestMapping);
 
         MvcResult mvcResult = performPost("/register", this.appUser)
                             .andExpect(status().isCreated())
@@ -107,6 +122,7 @@ public class AppUserControllerTest {
     }
 
 
+// ----- update()
     @Test
     void update_shouldBeStatus200() throws Exception {
 
@@ -150,14 +166,14 @@ public class AppUserControllerTest {
     }
 
 
+// ----- confirmAccount()
     @Test
     void confirmAccount_shouldBeStatus200() throws Exception {
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.add("email", this.email);
         params.add("token", this.token);
 
-        MvcResult mvcResult = performGet("/confirmAccount?", params)
+        MvcResult mvcResult = performPost("/confirmAccount?", params, null)
                             .andExpect(status().isOk())
                             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                             .andReturn();
@@ -176,29 +192,91 @@ public class AppUserControllerTest {
     void confirmAccount_shouldBeStatus400_blank() throws Exception {
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.add("email", "");
-        params.add("token", this.token);
+        params.add("token", "");
 
-        MvcResult mvcResult = performGet("/confirmAccount?", params)
+        MvcResult mvcResult = performPost("/confirmAccount?", params, null)
                              .andExpect(status().isBadRequest())
                              .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                              .andReturn();
 
         checkJsonApiExceptionFormat(mvcResult.getResponse().getContentAsString(), HttpStatus.BAD_REQUEST);
+    }
 
-        params.clear();
-        params.add("email", this.email);
+
+// ----- resendConfirmationMailByToken()
+    @Test
+    void resendConfirmationMailByToken_shouldBeStatus200() throws Exception {
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("token", this.token);
+
+        MvcResult mvcResult = performPost("/resendConfirmationMailByToken?", params, null)
+                            .andExpect(status().isOk())
+                            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                            .andReturn();
+
+        String jsonResponse = mvcResult.getResponse().getContentAsString();
+
+        assertTrue(jsonResponse.contains("\"error\":null"));
+
+        // modify response for the sake of check method
+        jsonResponse = jsonResponse.replace("null", "\"OK\"");
+        checkJsonApiExceptionFormat(jsonResponse, HttpStatus.OK);
+    }
+
+
+    @Test
+    void resendConfirmationMailByToken_shouldBeStatus400_blank() throws Exception {
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("token", "");
 
-        mvcResult = performGet("/confirmAccount?", params)
-                    .andExpect(status().isBadRequest())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andReturn();
+        MvcResult mvcResult = performPost("/resendConfirmationMailByToken?", params, null)
+                             .andExpect(status().isBadRequest())
+                             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                             .andReturn();
+
+        checkJsonApiExceptionFormat(mvcResult.getResponse().getContentAsString(), HttpStatus.BAD_REQUEST);
+    }
+
+// ----- resendConfirmationMailByEmail()
+    @Test
+    void resendConfirmationMailByEmail_shouldBeStatus200() throws Exception {
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("email", this.email);
+
+        MvcResult mvcResult = performPost("/resendConfirmationMailByEmail?", params, null)
+                            .andExpect(status().isOk())
+                            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                            .andReturn();
+
+        String jsonResponse = mvcResult.getResponse().getContentAsString();
+
+        assertTrue(jsonResponse.contains("\"error\":null"));
+
+        // modify response for the sake of check method
+        jsonResponse = jsonResponse.replace("null", "\"OK\"");
+        checkJsonApiExceptionFormat(jsonResponse, HttpStatus.OK);
+    }
+
+
+    @Test
+    void resendConfirmationMailByEmail_shouldBeStatus400_blank() throws Exception {
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("email", "");
+
+        MvcResult mvcResult = performPost("/resendConfirmationMailByEmail?", params, null)
+                             .andExpect(status().isBadRequest())
+                             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                             .andReturn();
 
         checkJsonApiExceptionFormat(mvcResult.getResponse().getContentAsString(), HttpStatus.BAD_REQUEST);
     }
 
 
+// ----- getByEmail()
     @Test
     void getByEmail_shouldBeStatus200() throws Exception {
 
@@ -233,6 +311,15 @@ public class AppUserControllerTest {
     private ResultActions performPost(String path, Object body) throws Exception {
 
         return this.mockMvc.perform(post(this.requestMapping + path)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectToJson(body)));
+    }
+
+
+    private ResultActions performPost(String path, MultiValueMap<String, String> params, Object body) throws Exception {
+
+        return this.mockMvc.perform(post(this.requestMapping + path)
+                                    .params(params)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectToJson(body)));
     }

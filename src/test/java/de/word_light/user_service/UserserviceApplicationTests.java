@@ -33,15 +33,18 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
+import static org.springframework.http.HttpStatus.IM_USED;
+import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.NOT_ACCEPTABLE;
+
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.mail.MessagingException;
-import jakarta.validation.ConstraintViolationException;
-import jakarta.validation.Validator;
 
 
 /**
@@ -66,9 +69,6 @@ class UserserviceApplicationTests {
 
     @Autowired
     private ConfirmationTokenRepository confirmationTokenRepository;
-
-    @Autowired
-    private Validator validator;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -110,7 +110,6 @@ class UserserviceApplicationTests {
             this.confirmationToken = new ConfirmationToken(this.token, this.appUser);
             this.confirmationToken.setId(getExistingConfirmationTokenId(this.token));
             this.confirmationToken = confirmationTokenService.save(this.confirmationToken);
-
         }
 
         
@@ -125,42 +124,56 @@ class UserserviceApplicationTests {
             confirmationTokenService.save(this.confirmationToken);
         }
 
+        @Test
+        void test() {
 
+            this.appUser = new AppUser(this.email, this.password, this.role);
+            this.appUser.setId(getExistingAppUserId(this.email));
+            this.appUser = appUserService.save(this.appUser);
+
+            this.secondAppUser = new AppUser("nonexisting@domain.com", this.password, AppUserRole.USER);
+
+            this.confirmationToken = new ConfirmationToken(this.token, this.appUser);
+            this.confirmationToken.setId(getExistingConfirmationTokenId(this.token));
+            this.confirmationToken = confirmationTokenService.save(this.confirmationToken);
+        }
+
+
+// --------- confirmAccount()
         @Test
         public void confirmAccount_shouldBeEnabled() {
             
             assertFalse(this.appUser.isEnabled());
+            assertFalse(this.confirmationToken.isConfirmed());
 
-            // TODO
-            // appUserService.confirmAccount(this.email, this.token);
+            appUserService.confirmAccount(this.token);
             this.appUser = appUserService.loadUserByUsername(this.email);
 
             assertTrue(this.appUser.isEnabled());
+            this.confirmationToken = confirmationTokenService.getByToken(this.token);
+            assertTrue(this.confirmationToken.isConfirmed());        
         }
 
 
         @Test 
-        // TODO:
         void confirmAccount_shouldValidate() {
 
-            // assertDoesNotThrow(() -> appUserService.confirmAccount(this.email, this.token));
+            assertDoesNotThrow(() -> appUserService.confirmAccount(this.token));
 
-            // null
-            // assertThrows(ConstraintViolationException.class, () -> appUserService.confirmAccount(this.email, null));
-            // assertThrows(ConstraintViolationException.class, () -> appUserService.confirmAccount(null, this.token));
-
-            // // blank
-            // assertThrows(ConstraintViolationException.class, () -> appUserService.confirmAccount(this.email, " "));
-            // assertThrows(ConstraintViolationException.class, () -> appUserService.confirmAccount(" ", this.token));
+            assertApiExceptionAndStatus(() -> appUserService.confirmAccount(null), INTERNAL_SERVER_ERROR);
+            assertApiExceptionAndStatus(() -> appUserService.confirmAccount(""), INTERNAL_SERVER_ERROR);
+            assertApiExceptionAndStatus(() -> appUserService.confirmAccount(" "), INTERNAL_SERVER_ERROR);
         }
 
 
+// --------- loadUserByUsername()
         @Test
         void loadUserByUsername_shouldFindByEmail() {
 
-            assertThrows(ApiException.class, () -> appUserService.loadUserByUsername("nonexisting@domain.com"));
+            assertApiExceptionAndStatus(() -> appUserService.loadUserByUsername("nonexisting@domain.com"), NOT_ACCEPTABLE);
 
-            assertDoesNotThrow(() -> appUserService.loadUserByUsername(this.email));
+            AppUser appUser = appUserService.loadUserByUsername(this.email);
+            assertEquals(this.email, appUser.getEmail());
         }
 
 
@@ -169,26 +182,26 @@ class UserserviceApplicationTests {
 
             assertDoesNotThrow(() -> appUserService.loadUserByUsername(this.email));
 
-            assertThrows(ApiException.class, () -> appUserService.loadUserByUsername(null));
-            assertThrows(ApiException.class, () -> appUserService.loadUserByUsername(" "));
+            assertApiExceptionAndStatus(() -> appUserService.loadUserByUsername(null), INTERNAL_SERVER_ERROR);
+            assertApiExceptionAndStatus(() -> appUserService.loadUserByUsername(""), INTERNAL_SERVER_ERROR);
+            assertApiExceptionAndStatus(() -> appUserService.loadUserByUsername(" "), INTERNAL_SERVER_ERROR);
         }
 
 
+// --------- register()
         @Test
         void register_shouldThrowOnDuplicateEmail() {
 
-            assertDoesNotThrow(() -> 
-                expectMailingException(() -> appUserService.register(this.secondAppUser)));
-
-            assertThrows(ApiException.class, () -> appUserService.register(this.secondAppUser));
+            assertApiExceptionAndStatus(() -> appUserService.register(this.appUser), CONFLICT);
         }
 
 
         @Test
         void register_shouldSave() {
+
             assertFalse(appUserRepository.existsByEmail(this.secondAppUser.getEmail()));
 
-            expectMailingException(() -> appUserService.register(this.secondAppUser));
+            appUserService.register(this.secondAppUser);
 
             assertTrue(appUserRepository.existsByEmail(this.secondAppUser.getEmail()));
         }
@@ -199,7 +212,7 @@ class UserserviceApplicationTests {
             
             assertEquals(this.password, this.secondAppUser.getPassword());
 
-            expectMailingException(() -> appUserService.register(this.secondAppUser));
+            appUserService.register(this.secondAppUser);
             
             assertNotEquals(this.password, this.secondAppUser.getPassword());
         }
@@ -208,18 +221,77 @@ class UserserviceApplicationTests {
         @Test
         void register_shouldValidate() {
 
-            assertThrows(ConstraintViolationException.class, () -> appUserService.register(null));
+            assertApiExceptionAndStatus(() -> appUserService.register(null), INTERNAL_SERVER_ERROR);
 
-            assertDoesNotThrow(() -> 
-                expectMailingException(() -> appUserService.register(this.secondAppUser)));
+            String secondAppUserEmail = this.secondAppUser.getEmail();
+
+            this.secondAppUser.setEmail("invalidEmail");
+            assertApiExceptionAndStatus(() -> 
+                appUserService.register(this.secondAppUser), BAD_REQUEST);
+            this.secondAppUser.setEmail(secondAppUserEmail);
+
+            this.secondAppUser.setPassword("invalidPasword");
+            assertApiExceptionAndStatus(() -> 
+                appUserService.register(this.secondAppUser), BAD_REQUEST);
+            this.secondAppUser.setPassword(this.password);
+
+            assertDoesNotThrow(() -> appUserService.register(this.secondAppUser));
+        }
+
+
+// -------- resendConfirmationMailByToken
+        @Test
+        void resendConfirmationMailByToken_shouldNotThrow() {
+
+            assertDoesNotThrow(() -> appUserService.resendConfirmationMailByToken(this.token));
         }
 
 
         @Test
-        @Order(1)
+        void resendConfirmationMailByToken_shouldThrow() {
+
+            assertApiExceptionAndStatus(() ->
+                appUserService.resendConfirmationMailByToken(null), INTERNAL_SERVER_ERROR);
+
+            assertApiExceptionAndStatus(() ->
+                appUserService.resendConfirmationMailByToken(""), INTERNAL_SERVER_ERROR);
+
+            assertApiExceptionAndStatus(() ->
+                appUserService.resendConfirmationMailByToken("nonExistingToken"), NOT_ACCEPTABLE);
+        }
+
+
+        // -------- resendConfirmationMailByEmail
+        @Test
+        void resendConfirmationMailByEmail_shouldNotThrow() {
+
+            assertDoesNotThrow(() -> appUserService.resendConfirmationMailByEmail(this.email));
+        }
+
+
+        @Test
+        void resendConfirmationMailByEmail_shouldThrow() {
+
+            assertApiExceptionAndStatus(() ->
+                appUserService.resendConfirmationMailByEmail(null), INTERNAL_SERVER_ERROR);
+
+            assertApiExceptionAndStatus(() ->
+                appUserService.resendConfirmationMailByEmail(""), INTERNAL_SERVER_ERROR);
+
+            assertApiExceptionAndStatus(() ->
+                appUserService.resendConfirmationMailByEmail("nonExistingEmail"), NOT_ACCEPTABLE);
+        }
+
+
+// -------- update()
+        @Test
         void update_shouldUpdateAllFields() {
             
-            String newEmail = "differentEmail@domain.com";
+            // try to update allthough wont work
+            Long newId = this.appUser.getId() + 1;
+            LocalDateTime newCreated = LocalDateTime.now();
+            String newEmail = "newEmail@domain.com";
+
             String newPassword = "differenPassword2!";
             AppUserRole newRole = AppUserRole.ADMIN;
             boolean isAccountNonExpired = false;
@@ -227,8 +299,11 @@ class UserserviceApplicationTests {
             boolean isCredentialsNonExpired = false;
             boolean isEnabled = true;
 
-            // all fields should be new
+            // all fields should be different
+            assertNotEquals(newId, this.appUser.getId());
+            assertNotEquals(newCreated, this.appUser.getCreated());
             assertNotEquals(newEmail, this.appUser.getEmail());
+
             assertFalse(doPasswordsMatch(newPassword, this.appUser.getPassword()));
             assertNotEquals(newRole, this.appUser.getRole());
             assertNotEquals(isAccountNonExpired, this.appUser.isAccountNonExpired());
@@ -236,7 +311,6 @@ class UserserviceApplicationTests {
             assertNotEquals(isCredentialsNonExpired, this.appUser.isCredentialsNonExpired());
             assertNotEquals(isEnabled, this.appUser.isEnabled());
 
-            this.appUser.setEmail(newEmail);
             this.appUser.setPassword(newPassword);
             this.appUser.setRole(newRole);
             this.appUser.setAccountNonExpired(isAccountNonExpired);
@@ -247,17 +321,31 @@ class UserserviceApplicationTests {
             appUserService.update(this.appUser);
 
             // retrieve updated user from db
-            AppUser updatedAppUser = appUserRepository.findByEmail(newEmail)
-                                                      .orElseThrow(() -> new ApiException("Failed to find updated user with email: " + newEmail));
+            AppUser updatedAppUser = appUserService.loadUserByUsername(this.email);
 
-            // all fields should be updated
-            assertEquals(newEmail, updatedAppUser.getEmail());
+            // all fields should be updated except for email, created and id
+            assertNotEquals(newCreated, this.appUser.getCreated());
+            assertNotEquals(newId, this.appUser.getId());
+            assertNotEquals(newEmail, this.appUser.getEmail());
+
+            assertEquals(this.email, updatedAppUser.getEmail());
             assertTrue(doPasswordsMatch(newPassword, updatedAppUser.getPassword()));
             assertEquals(newRole, updatedAppUser.getRole());
             assertEquals(isAccountNonExpired, updatedAppUser.isAccountNonExpired());
             assertEquals(isAccountNonLocked, updatedAppUser.isAccountNonLocked());
             assertEquals(isCredentialsNonExpired, updatedAppUser.isCredentialsNonExpired());
             assertEquals(isEnabled, updatedAppUser.isEnabled());
+        }
+
+
+        @Test
+        void update_shouldThrowOnUpdateMail() {
+
+            this.appUser.setEmail("newEmail@domain.com");
+            assertApiExceptionAndStatus(() -> appUserService.update(this.appUser), NOT_ACCEPTABLE);
+            
+            this.appUser.setEmail(this.email);
+            assertDoesNotThrow(() -> appUserService.update(this.appUser));
         }
 
 
@@ -284,7 +372,7 @@ class UserserviceApplicationTests {
 
             appUserService.update(this.appUser);
 
-            AppUser updatedAppUser = appUserRepository.findByEmail(this.email).get();
+            AppUser updatedAppUser = appUserService.loadUserByUsername(this.email);
 
             assertNotEquals(password, updatedAppUser.getPassword());
 
@@ -294,19 +382,11 @@ class UserserviceApplicationTests {
 
 
         @Test
-        void update_shouldThrowOnIdNull() {
-
-            this.appUser.setId(null);
-            assertTrue(isApiExceptionBadRequest(() -> appUserService.update(this.appUser)));
-        }
-
-
-        @Test
         void update_shouldThrowOnNonExistingAppUser() {
 
             assertDoesNotThrow(() -> appUserService.update(this.appUser));
 
-            assertThrows(ApiException.class, () -> appUserService.update(this.secondAppUser));
+            assertApiExceptionAndStatus(() -> appUserService.update(this.secondAppUser), NOT_ACCEPTABLE);
         }
 
 
@@ -315,20 +395,22 @@ class UserserviceApplicationTests {
 
             assertDoesNotThrow(() -> appUserService.update(this.appUser));
 
-            assertThrows(ConstraintViolationException.class, () -> appUserService.update(null));
+            assertApiExceptionAndStatus(() -> appUserService.update(null), INTERNAL_SERVER_ERROR);
         }
 
 
+// -------- validatePassword()
         @Test
         void validatePassword_shouldBeValidPassword() {
 
-            List<String> invalidPasswords = List.of("&Abc123.,",
+            List<String> validPasswords = List.of("&Abc123.,",
                                                     "üöAbc123$&",
                                                     "11238974Fa3#",
                                                     "123456789012345678901234567Ab,");
 
-            invalidPasswords.forEach(password -> 
-                assertDoesNotThrow(() -> appUserService.validatePassword(password), "Falsy input: " + password));
+            validPasswords.forEach(password -> 
+                assertDoesNotThrow(() -> 
+                    appUserService.validatePassword(password), "Falsy input: " + password));
         }
 
 
@@ -339,71 +421,57 @@ class UserserviceApplicationTests {
                                                  "Abc1,", // shorter than 8
                                                  "abc123#&", // no uppercase
                                                  "ABC123^+", // no lowercase
-                                                 "Abcde$§", // no number
-                                                 "Abcde12", // no special char
-                                                 "1234,_", // no alpha char
+                                                 "Abcdef$§", // no number
+                                                 "Abcde123", // no special char
+                                                 "123456,_", // no alpha char
                                                  "123456789012345678901234567890aA.", // longer than 30
                                                  "password");
 
             invalidPasswords.forEach(password -> 
-                assertTrue(isApiExceptionBadRequest(() -> appUserService.validatePassword(password)), "Falsy input: " + password));
-
-            assertThrows(ConstraintViolationException.class, () -> appUserService.validatePassword(null));
+                assertApiExceptionAndStatus(() -> appUserService.validatePassword(password), BAD_REQUEST, "Falsy input: " + password));
+        
+            assertApiExceptionAndStatus(() -> appUserService.validateEmail(null), BAD_REQUEST, "Falsy input: " + password);
         }
 
 
+// -------- validateEmail()
         @Test
-        void appUser_shouldBeValidEmail() {
+        void validateEmail_shouldBeValidEmail() {
 
-            List<String> invalidEmails = List.of("name.879secondName@domain.com",
+            List<String> validEmails = List.of("name.879secondName@domain.com",
                                                  "name12-89secondName@domain.net",
                                                  "name@domain.name.de");
 
-            invalidEmails.forEach(email -> {
-                this.secondAppUser.setEmail(email);
-                assertTrue(validator.validate(this.secondAppUser).isEmpty(), "Falsy input: " + email);
-            });
+            validEmails.forEach(email -> 
+                assertDoesNotThrow(() -> 
+                    appUserService.validateEmail(email), "Falsy input: " + email));
         }
         
 
         @Test
-        void appUser_shouldBeInvalidEmail() {
+        void validateEmail_shouldBeInvalidEmail() {
 
             List<String> invalidEmails = List.of(" ",
-                                                 "invalidMaildomain.com",
-                                                 "invalidMail@.com",
-                                                 "invalidMail@domain.",
-                                                 "invalidMail@domain",
-                                                 "invalidMail@domain.weirdSuffix");
+                                                 "invalidMaildomain.com", // non @
+                                                 "invalidMail@.com", // no domain
+                                                 "invalidMail@domain.", // no suffix
+                                                 "invalidMail@domain.weirdSuffix"); // invalid suffix
 
-            invalidEmails.forEach(email -> {
-                this.secondAppUser.setEmail(email);
-                assertEquals(1, validator.validate(this.secondAppUser).size(), "Falsy input: " + email);
-            });
+            invalidEmails.forEach(email -> 
+                assertApiExceptionAndStatus(() -> appUserService.validateEmail(email), BAD_REQUEST, "Falsy input: " + email));
 
-            this.secondAppUser.setEmail(null);
-            assertEquals(1, validator.validate(this.secondAppUser).size(), "Falsy input: " + null);
-        }
-
-
-        @Test
-        void appUser_shouldValidateRole() {
-
-            assertDoesNotThrow(() -> expectMailingException(() -> appUserService.register(this.secondAppUser)));
-
-            this.secondAppUser.setRole(null);
-            assertThrows(ConstraintViolationException.class, () -> appUserService.register(this.secondAppUser));
+            assertApiExceptionAndStatus(() -> appUserService.validateEmail(null), BAD_REQUEST, "Falsy input: " + email);
         }
 
 
         @AfterAll
         void cleanAllUp() {
 
-            appUserRepository.deleteAll();
             confirmationTokenRepository.deleteAll();
+            appUserRepository.deleteAll();
         }
     }
-
+    
     
     @TestInstance(Lifecycle.PER_CLASS)
     @Nested
@@ -415,12 +483,17 @@ class UserserviceApplicationTests {
         private long id;
         private String token = UUID.randomUUID().toString();
 
-        
+        private AppUser appUser;
+
+
         @BeforeEach
-        void setUp() {
-            
-            // TODO:
-            this.confirmationToken = new ConfirmationToken(this.token, null);
+        void setup() {
+
+            this.appUser = new AppUser("max.mustermann@domain.com", "Abc123,.", AppUserRole.USER);
+            this.appUser.setId(getExistingAppUserId("max.mustermann@domain.com"));
+            this.appUser = appUserService.save(this.appUser);
+
+            this.confirmationToken = new ConfirmationToken(this.token, this.appUser);
             this.confirmationToken.setId(getExistingConfirmationTokenId(this.token));
             this.confirmationToken = confirmationTokenService.save(this.confirmationToken);
 
@@ -428,13 +501,13 @@ class UserserviceApplicationTests {
         }
         
 
+// --------- saveNew()
         @Test
         void saveNew_shouldSave() {
 
             int numConfirmationTokens = confirmationTokenRepository.findAll().size();
 
-            // TODO
-            ConfirmationToken confirmationToken = confirmationTokenService.saveNew(null);
+            ConfirmationToken confirmationToken = confirmationTokenService.saveNew(this.appUser);
 
             assertTrue(confirmationTokenRepository.existsByToken(confirmationToken.getToken()));
 
@@ -443,13 +516,24 @@ class UserserviceApplicationTests {
 
 
         @Test
+        void saveNew_shouldThrowNull() {
+
+            assertDoesNotThrow(() -> confirmationTokenService.saveNew(this.appUser));
+
+            assertApiExceptionAndStatus(() -> confirmationTokenService.saveNew(null), INTERNAL_SERVER_ERROR);
+        }
+
+
+// --------- confirmToken()    
+        @Test
         @Order(1)
         void confirmToken_shouldValidate() {
 
             assertDoesNotThrow(() -> confirmationTokenService.confirmToken(this.token));
 
-            assertThrows(ConstraintViolationException.class, () -> confirmationTokenService.confirmToken(null));
-            assertThrows(ConstraintViolationException.class, () -> confirmationTokenService.confirmToken(" "));
+            assertApiExceptionAndStatus(() -> confirmationTokenService.confirmToken(null), INTERNAL_SERVER_ERROR);
+            assertApiExceptionAndStatus(() -> confirmationTokenService.confirmToken(" "), INTERNAL_SERVER_ERROR);
+            assertApiExceptionAndStatus(() -> confirmationTokenService.confirmToken(""), INTERNAL_SERVER_ERROR);
         }
 
 
@@ -459,7 +543,7 @@ class UserserviceApplicationTests {
 
             assertDoesNotThrow(() -> confirmationTokenService.confirmToken(this.token));
 
-            assertThrows(ApiException.class, () -> confirmationTokenService.confirmToken("nonExistintToken"));
+            assertApiExceptionAndStatus(() -> confirmationTokenService.confirmToken("nonExistintToken"), NOT_ACCEPTABLE);
         }
 
 
@@ -471,7 +555,7 @@ class UserserviceApplicationTests {
 
             assertTrue(confirmationTokenService.getById(this.id).getConfirmedAt() != null);
 
-            assertThrows(ApiException.class, () -> confirmationTokenService.confirmToken(this.token));
+            assertApiExceptionAndStatus(() -> confirmationTokenService.confirmToken(this.token), IM_USED);
         }
 
 
@@ -485,30 +569,25 @@ class UserserviceApplicationTests {
             this.confirmationToken.setExpiresAt(LocalDateTime.now());
             confirmationTokenService.save(confirmationToken);
 
-            assertThrows(ApiException.class, () -> confirmationTokenService.confirmToken(this.token));
+            assertApiExceptionAndStatus(() -> confirmationTokenService.confirmToken(this.token), CONFLICT);
+        }
+
+
+// --------- getByToken()
+        @Test
+        void getByToken_shouldFindConfirmationToken() {
+
+            assertDoesNotThrow(() -> confirmationTokenService.getByToken(this.token));
         }
 
 
         @Test
-        void confirmationToken_shouldValidateToken() {
+        void getByToken_shouldThrowNotAcceptable() {
 
-            assertTrue(validator.validate(this.confirmationToken).isEmpty());
+            assertDoesNotThrow(() -> confirmationTokenService.getByToken(this.token));
 
-            this.confirmationToken.setToken(" ");
-            assertEquals(1, validator.validate(this.confirmationToken).size());
-            
-            this.confirmationToken.setToken(null);
-            assertEquals(1, validator.validate(this.confirmationToken).size());
-        }
-
-
-        @Test
-        void confirmationToken_shouldValidateExpiresAt() {
-
-            assertTrue(validator.validate(this.confirmationToken).isEmpty());
-
-            this.confirmationToken.setExpiresAt(null);
-            assertEquals(1, validator.validate(this.confirmationToken).size());
+            assertApiExceptionAndStatus(() ->
+                confirmationTokenService.getByToken("nonExistingToken"), NOT_ACCEPTABLE);
         }
 
 
@@ -555,12 +634,13 @@ class UserserviceApplicationTests {
         }
 
 
+// --------- save()
         @Test
         void save_shouldValidate() {
 
             assertDoesNotThrow(() -> appUserService.save(this.appUser));
 
-            assertTrue(isApiExceptionBadRequest(() -> appUserService.save(null)));
+            assertApiExceptionAndStatus(() -> appUserService.save(null), INTERNAL_SERVER_ERROR);
         }
 
 
@@ -580,47 +660,41 @@ class UserserviceApplicationTests {
 
 
         @Test 
+        @Order(1)
         void save_shouldUpdateIfExists() {
 
-            LocalDateTime created = this.appUser.getCreated();
-            assertNotNull(created);
+            assertNotNull(this.appUser.getCreated());
 
-            LocalDateTime updated = this.appUser.getUpdated();
-            assertNotNull(updated);
+            assertNotNull(this.appUser.getUpdated());
 
-            assertEquals(this.email, this.appUser.getEmail());
+            assertEquals(this.role, this.appUser.getRole());
 
-            // change email
-            String newEmail = "newEmail@domain.com";
-            this.appUser.setEmail(newEmail);
+            // change role
+            AppUserRole newRole = AppUserRole.ADMIN;
+            this.appUser.setRole(newRole);
 
             // update
-            appUserService.save(this.appUser);
+            AppUser updatedAppUser = appUserService.save(this.appUser);
             
-            AppUser updatedAppUser = appUserRepository.findByEmail(newEmail)
-                                                        .orElseThrow(() -> new ApiException("Failed to update appUser. Test failed."));
-
             // created should be the same
             assertNotNull(updatedAppUser.getCreated());
-            assertEquals(created.truncatedTo(ChronoUnit.MILLIS), 
-                        updatedAppUser.getCreated().truncatedTo(ChronoUnit.MILLIS));
+            assertEquals(this.appUser.getCreated(), updatedAppUser.getCreated());
 
             // updated should have changed
-            assertNotNull(updatedAppUser.getUpdated());
-            assertNotEquals(updated.truncatedTo(ChronoUnit.MILLIS),
-                            updatedAppUser.getUpdated().truncatedTo(ChronoUnit.MILLIS));
+            assertNotEquals(this.appUser.getUpdated(), updatedAppUser.getUpdated());
 
-            // email should have changed
-            assertNotEquals(this.email, updatedAppUser.getEmail());
+            // role should have changed
+            assertEquals(newRole, updatedAppUser.getRole());
         }
 
 
+// --------- getById()
         @Test
         void getById_shouldValidate() {
 
             assertDoesNotThrow(() -> appUserService.getById(this.appUser.getId()));
 
-            assertTrue(isApiExceptionBadRequest(() -> appUserService.getById(null)));
+            assertApiExceptionAndStatus(() -> appUserService.getById(null), INTERNAL_SERVER_ERROR);
         }
 
 
@@ -629,7 +703,17 @@ class UserserviceApplicationTests {
 
             assertDoesNotThrow(() -> appUserService.getById(this.appUser.getId()));
 
-            assertThrows(ApiException.class, () -> appUserService.getById(this.secondAppUser.getId()));
+            assertApiExceptionAndStatus(() -> appUserService.getById(this.secondAppUser.getId()), NOT_ACCEPTABLE);
+        }
+
+
+// --------- delete()
+        @Test
+        void delete_shouldValidate() {
+
+            assertDoesNotThrow(() -> appUserService.delete(this.appUser));
+
+            assertApiExceptionAndStatus(() -> appUserService.delete(null), INTERNAL_SERVER_ERROR);
         }
 
 
@@ -647,6 +731,7 @@ class UserserviceApplicationTests {
         @AfterAll
         void cleanAllUp() {
 
+            confirmationTokenRepository.deleteAll();
             appUserRepository.deleteAll();
         }
     }
@@ -658,6 +743,8 @@ class UserserviceApplicationTests {
      * @param appUser to remove
      */
     private void removeAppUser(AppUser appUser) {
+
+        this.confirmationTokenRepository.deleteAllByAppUserEmail(appUser.getEmail());
 
         this.appUserRepository.deleteByEmail(appUser.getEmail());
         assertFalse(this.appUserRepository.existsByEmail(appUser.getEmail()), "Failed to clean up after test.");
@@ -700,18 +787,20 @@ class UserserviceApplicationTests {
      * Catch {@link ApiException} and check if http status is {@code BAD_REQUEST}.
      * 
      * @param lambda function to call inside the try catch block
+     * @param httpStatus to expect from exception
+     * @param message to display with thrown exception
      * @return true if status of exception is 400, else false
      */
-    private boolean isApiExceptionBadRequest(Runnable lambda) {
+    private void assertApiExceptionAndStatus(Runnable lambda, HttpStatus httpStatus, String message) {
 
-        try {
-            lambda.run();
+        ApiException exception = assertThrows(ApiException.class, () -> lambda.run(), message);
+        assertEquals(httpStatus, exception.getStatus());
+    }
 
-        } catch (ApiException e) {
-            return e.getStatus().equals(HttpStatus.BAD_REQUEST);
-        }
 
-        return false;
+    private void assertApiExceptionAndStatus(Runnable lambda, HttpStatus httpStatus) {
+
+        assertApiExceptionAndStatus(lambda, httpStatus, "");
     }
 
 
@@ -729,6 +818,7 @@ class UserserviceApplicationTests {
         } catch (ApiException e) {
             Exception originalException = e.getOriginalException();
             assertTrue(originalException instanceof MailException || originalException instanceof MessagingException);
+            assertEquals(e.getStatus(), INTERNAL_SERVER_ERROR);
         }
     }
 

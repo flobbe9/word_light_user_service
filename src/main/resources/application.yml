@@ -37,11 +37,18 @@ spring:
         # database-platform: org.hibernate.dialect.H2Dialect
         hibernate:
             ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+            
         defer-datasource-initialization: true
         open-in-view: false
         # console: 
         #     enabled: true
         #     path: /h2
+        # don't validate during db actions
+        properties:
+            jakarta:
+                persistence:
+                    validation:
+                        mode: none 
         
     ## mail (maildev access inbox on localhost:1080)
     mail:

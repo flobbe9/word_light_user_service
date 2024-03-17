@@ -63,7 +63,7 @@ public class Utils {
      * - one number and <p>
      * - one of given special characters.
      */
-    public static final String PASSWORD_REGEX = "^.*(?=.{8,})(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[.,;_!#$%&*+=?`\"'\\/\\{|}()~^-]).*$";
+    public static final String PASSWORD_REGEX = "^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[.,;_!#$%&@€*+=?´`\"'\\/\\{|}()~^-])(.{8,30})$";
     public static final String EMAIL_REGEX = "^[\\w\\-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$";
 
     @Bean
@@ -175,7 +175,7 @@ public class Utils {
 
         if (StringUtils.isBlank(password))
             return false;
-        
+
         return password.matches(PASSWORD_REGEX);
     }
 

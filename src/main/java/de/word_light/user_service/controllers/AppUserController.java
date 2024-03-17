@@ -38,7 +38,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequestMapping("${MAPPING}")
 @Tag(name = "AppUser logic")
 @Validated
-// TODO: tests
 public class AppUserController {
 
     @Autowired

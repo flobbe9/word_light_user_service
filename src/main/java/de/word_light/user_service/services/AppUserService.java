@@ -32,10 +32,7 @@ import jakarta.annotation.Resource;
  */
 @Service
 // TODO: add user service to docker-compose all
-// TODO: tests
 // TODO: 
-    // register
-    // confirm
     // login
     // logout
     // getcsrf but protected this time
@@ -91,7 +88,7 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
     /**
      * Call {@code save} method of jpa repo on existing {@link AppUser} or throw if does not exist. <p>
      * 
-     * Don't allow to update {@code email} since it's the only identifier for a user.
+     * Don't allow to update {@code email, created or id} fields.
      * 
      * @param appUser to update
      * @return updated appUser
@@ -105,6 +102,7 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
 
         AppUser oldAppUser = loadUserByUsername(appUser.getEmail());
         appUser.setId(oldAppUser.getId());
+        appUser.setCreated(oldAppUser.getCreated());
 
         // case: changed password
         if (!oldAppUser.getPassword().equals(appUser.getPassword())) {
@@ -113,7 +111,7 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
             appUser.setPassword(this.passwordEncoder.encode(password));
         }
 
-        return save(appUser);
+        return super.save(appUser);
     }
 
 
@@ -182,7 +180,7 @@ public class AppUserService extends AbstractService<AppUser, AppUserRepository> 
         if (StringUtils.isBlank(token))
             throw new ApiException("Failed to resend confirmation mail. 'token' is blank or null.");
 
-        ConfirmationToken confirmationToken = this.confirmationTokenService.findByToken(token);
+        ConfirmationToken confirmationToken = this.confirmationTokenService.getByToken(token);
         AppUser appUser = confirmationToken.getAppUser();
         
         // should not happen

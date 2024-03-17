@@ -2,13 +2,13 @@ package de.word_light.user_service.abstracts;
 
 import java.time.LocalDateTime;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -28,16 +28,18 @@ public abstract class AbstractEntity {
     @Schema(hidden = true)
     private Long id;
 
-    @JsonIgnore
+    @Schema(hidden = true)
     private LocalDateTime created;
 
-    @JsonIgnore
+    @Schema(hidden = true)
     private LocalDateTime updated;
 
 
-    public AbstractEntity() {
+    @PrePersist
+    @PreUpdate
+    void update() {
 
-        if (this.created == null)
+        if (this.created == null) 
             this.created = LocalDateTime.now();
 
         this.updated = LocalDateTime.now();

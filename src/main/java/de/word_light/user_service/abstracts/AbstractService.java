@@ -32,7 +32,7 @@ public abstract class AbstractService<E extends AbstractEntity, Repository exten
     public E save(E entity) {
 
         if (entity == null)
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Failed to save entity. 'entity' cannot be null.");
+            throw new ApiException("Failed to save entity. 'entity' cannot be null.");
 
         return this.repository.save(entity);
     }
@@ -41,17 +41,18 @@ public abstract class AbstractService<E extends AbstractEntity, Repository exten
     public E getById(Long id) {
 
         if (id == null)
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Failed find entity by id. 'id' cannot be null.");
+            throw new ApiException("Failed find entity by id. 'id' cannot be null.");
 
         return this.repository.findById(id)
-                              .orElseThrow(() -> new ApiException("Failed to find entity with id: " + id + "."));
+                              .orElseThrow(() -> 
+                                new ApiException(HttpStatus.NOT_ACCEPTABLE, "Failed to find entity with id: " + id + "."));
     }
 
 
     public void delete(E entity) {
 
         if (entity == null)
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Failed to save entity. 'entity' cannot be null.");
+            throw new ApiException("Failed to save entity. 'entity' cannot be null.");
 
         this.repository.delete(entity);
     }

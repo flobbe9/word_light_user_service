@@ -18,4 +18,7 @@ public interface ConfirmationTokenRepository extends Dao<ConfirmationToken> {
 
     @Transactional
     void deleteAllByUpdatedBefore(LocalDateTime minusDays);
+
+    @Transactional
+    void deleteAllByAppUserEmail(String email);
 }
